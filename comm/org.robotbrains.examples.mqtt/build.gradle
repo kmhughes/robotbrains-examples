@@ -1,0 +1,13 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+dependencies {
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repo.eclipse.org/content/repositories/paho-releases/"
+    }
+}
