@@ -31,7 +31,7 @@ import java.util.Properties;
 public class Main {
 
   public static void main(String[] args) throws Exception {
-    final Main main = new Main();
+    final Main main = new Main(args[0]);
     main.startup();
     
     Runtime.getRuntime().addShutdownHook(new Thread()
@@ -46,9 +46,18 @@ public class Main {
    }
 
   /**
+   * Location of the configuration file.
+   */
+  private String configFileLocation;
+  
+  /**
    * The remote data relay.
    */
   private MqttRemoteDataRelay remoteDataRelay;
+
+  public Main(String configFileLocation) {
+     this.configFileLocation = configFileLocation;
+  }
 
   /**
    * Start up the application.
@@ -59,7 +68,7 @@ public class Main {
   public void startup() throws Exception {
     
     Properties configuration = new Properties();
-    configuration.load(new FileInputStream(new File(System.getProperty("configuration.file"))));
+    configuration.load(new FileInputStream(new File(configFileLocation)));
 
     Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
     loggingProvider.startup();
