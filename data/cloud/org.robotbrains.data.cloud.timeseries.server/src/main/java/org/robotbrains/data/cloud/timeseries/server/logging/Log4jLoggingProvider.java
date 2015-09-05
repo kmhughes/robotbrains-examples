@@ -14,7 +14,7 @@
  * the License.
  */
 
-package org.robotbrains.data.cloud.timeseries.logging;
+package org.robotbrains.data.cloud.timeseries.server.logging;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,6 +29,10 @@ import java.io.IOException;
  * @author Keith M. Hughes
  */
 public class Log4jLoggingProvider {
+  
+  /**
+   * Start the logging provider.
+   */
   public void startup() {
     try {
       Configurator.initialize(null, new ConfigurationSource(getClass().getClassLoader().getResourceAsStream("log4j.xml")));
@@ -38,6 +42,11 @@ public class Log4jLoggingProvider {
     }
   }
   
+  /**
+   * Get the logger for the application.
+   * 
+   * @return the logger
+   */
   public Logger getLog() {
     return LogManager.getFormatterLogger("foo");
   }

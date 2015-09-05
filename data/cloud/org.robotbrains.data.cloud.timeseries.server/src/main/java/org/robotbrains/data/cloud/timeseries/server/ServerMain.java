@@ -13,11 +13,12 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.robotbrains.data.cloud.timeseries;
+package org.robotbrains.data.cloud.timeseries.server;
 
 import org.apache.logging.log4j.Logger;
-import org.robotbrains.data.cloud.timeseries.comm.remote.mqtt.MqttRemoteDataRelay;
-import org.robotbrains.data.cloud.timeseries.logging.Log4jLoggingProvider;
+import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.PahoMqttRemoteDataRelay;
+import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
+import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,56 +29,56 @@ import java.util.Properties;
  * 
  * @author Keith M. Hughes
  */
-public class Main {
+public class ServerMain {
 
   public static void main(String[] args) throws Exception {
-    final Main main = new Main(args[0]);
+    final ServerMain main = new ServerMain(args[0]);
     main.startup();
-    
-    Runtime.getRuntime().addShutdownHook(new Thread()
-    {
-        @Override
-        public void run()
-        {
-            System.out.println("Shutdown hook ran!");
-            main.shutdown();
-        }
+
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run() {
+        System.out.println("Shutdown hook ran!");
+        main.shutdown();
+      }
     });
-   }
+  }
 
   /**
    * Location of the configuration file.
    */
   private String configFileLocation;
-  
+
   /**
    * The remote data relay.
    */
-  private MqttRemoteDataRelay remoteDataRelay;
+  private RemoteDataRelay remoteDataRelay;
 
-  public Main(String configFileLocation) {
-     this.configFileLocation = configFileLocation;
+  public ServerMain(String configFileLocation) {
+    this.configFileLocation = configFileLocation;
   }
 
   /**
    * Start up the application.
    * 
    * @throws Exception
-   *        the application was unable to start
+   *           the application was unable to start
    */
   public void startup() throws Exception {
-    
     Properties configuration = new Properties();
     configuration.load(new FileInputStream(new File(configFileLocation)));
 
     Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
     loggingProvider.startup();
     Logger log = loggingProvider.getLog();
-    
-    remoteDataRelay = new MqttRemoteDataRelay(configuration, log);
+
+    remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     remoteDataRelay.startup();
   }
 
+  /**
+   * Shut down the server.
+   */
   public void shutdown() {
     remoteDataRelay.shutdown();
   }
