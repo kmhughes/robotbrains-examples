@@ -15,9 +15,9 @@
  */
 package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.Logger;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -79,7 +79,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
 
   static {
     MAPPER = new ObjectMapper();
-    MAPPER.getJsonFactory().enable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
+    MAPPER.getFactory().enable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
   }
 
   /**
