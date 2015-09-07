@@ -18,6 +18,7 @@ package org.robotbrains.data.cloud.timeseries.server;
 import org.apache.logging.log4j.Logger;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.PahoMqttRemoteDataRelay;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
+import org.robotbrains.data.cloud.timeseries.server.database.KairosDbDatabaseRelay;
 import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
 
 import java.io.File;
@@ -74,6 +75,9 @@ public class ServerMain {
 
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     remoteDataRelay.startup();
+    
+    KairosDbDatabaseRelay databaseRelay = new KairosDbDatabaseRelay();
+    databaseRelay.startup();
   }
 
   /**
