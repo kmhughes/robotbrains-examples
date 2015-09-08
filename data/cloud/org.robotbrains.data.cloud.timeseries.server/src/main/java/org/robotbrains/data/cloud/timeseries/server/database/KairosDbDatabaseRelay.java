@@ -6,6 +6,7 @@ package org.robotbrains.data.cloud.timeseries.server.database;
 import org.kairosdb.client.HttpClient;
 import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.response.GetResponse;
+import org.kairosdb.client.response.Response;
 
 /**
  * @author Keith M. Hughes
@@ -24,10 +25,13 @@ public class KairosDbDatabaseRelay {
             .addDataPoint(System.currentTimeMillis(), 10)
             .addDataPoint(System.currentTimeMillis(), 30L);
     
-    GetResponse response = client.getMetricNames();
+    Response pushResponse = client.pushMetrics(builder);
+    System.out.println("Push Response Code =" + pushResponse.getStatusCode());
+   
+    GetResponse metricResponse = client.getMetricNames();
 
-    System.out.println("Response Code =" + response.getStatusCode());
-    for (String name : response.getResults()) {
+    System.out.println("Metric Response Code =" + metricResponse.getStatusCode());
+    for (String name : metricResponse.getResults()) {
       System.out.println(name);
     }
     client.shutdown();
