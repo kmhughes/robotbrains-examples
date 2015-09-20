@@ -18,6 +18,47 @@ import yaml
 import paho.mqtt.client as mqtt
 import json
 import sys
+import time
+import RPi.GPIO as GPIO
+
+# Raspberry Pi GPIO bit-banging code
+# Written by Limor "Ladyada" Fried for Adafruit Industries, (c) 2015
+# This code is released into the public domain
+ 
+# read SPI data from MCP3008 chip, 8 possible adc's (0 thru 7)
+def readadc(adcnum, clockpin, mosipin, misopin, cspin):
+  if ((adcnum > 7) or (adcnum < 0)):
+    return -1
+  GPIO.output(cspin, True)
+
+  GPIO.output(clockpin, False)  # start clock low
+  GPIO.output(cspin, False)     # bring CS low
+
+  commandout = adcnum
+  commandout |= 0x18  # start bit + single-ended bit
+  commandout <<= 3    # we only need to send 5 bits here
+  for i in range(5):
+    if (commandout & 0x80):
+      GPIO.output(mosipin, True)
+    else:
+      GPIO.output(mosipin, False)
+    commandout <<= 1
+    GPIO.output(clockpin, True)
+    GPIO.output(clockpin, False)
+
+  adcout = 0
+  # read in one empty bit, one null bit and 10 ADC bits
+  for i in range(12):
+    GPIO.output(clockpin, True)
+    GPIO.output(clockpin, False)
+    adcout <<= 1
+    if (GPIO.input(misopin)):
+      adcout |= 0x1
+
+  GPIO.output(cspin, True)
+
+  adcout >>= 1       # first bit is 'null' so drop it
+  return adcout
 
 # The callback for when the MQTT client gets an acknowledgement from the MQTT
 # server.
@@ -40,26 +81,61 @@ def on_message(client, userdata, msg):
 
 # Read the properties that define user names and passwords.
 #
-# A Java properties file is being used so that the same properties can
+# The configuration file is in YAML.
 # be used in both languages.
 with open(sys.argv[1]) as fp:
   properties = yaml.safe_load(fp)
 
-print properties
+# Prepare the Raspberry Pi GPIO pins for the MCP3008 ADC chip.
+ 
+GPIO.setmode(GPIO.BCM)
 
-# Create the client.
-client = mqtt.Client()
+# change these as desired - they're the pins connected from the
+# SPI port on the ADC to the Cobbler
+SPICLK = 21
+SPIMISO = 20
+SPIMOSI = 16
+SPICS = 12
+
+# set up the SPI interface pins
+GPIO.setup(SPIMOSI, GPIO.OUT)
+GPIO.setup(SPIMISO, GPIO.IN)
+GPIO.setup(SPICLK, GPIO.OUT)
+GPIO.setup(SPICS, GPIO.OUT)
+
+# Create the MQTT client.
+mqttClient = mqtt.Client()
 
 # Set the methods to use for connection and message receiving
-client.on_connect = on_connect
-client.on_message = on_message
+mqttClient.on_connect = on_connect
+mqttClient.on_message = on_message
 
 # Set the user name and password from the properties
-client.username_pw_set(properties['mqtt.username'], properties['mqtt.password'])
+mqttClient.username_pw_set(properties['mqtt.username'], properties['mqtt.password'])
 
 # Connect to the server.
-client.connect(properties['mqtt.server.host'], int(properties['mqtt.server.port']), 60)
+mqttClient.connect(properties['mqtt.server.host'], int(properties['mqtt.server.port']), 60)
 
 # This method will not return and will continually loop to receive network
 # traffic.
-client.loop_forever()
+#mqttClient.loop_forever()
+     
+# Light sensor connected to adc #0
+light_sensor = 0;
+
+# Temperature sensor connected to adc #1
+temperature_sensor = 1
+
+DEBUG = 1
+
+while True:
+  # read the sensors
+  lightValue = readadc(light_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
+  temperatureValue = readadc(temperature_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
+ 
+  if DEBUG:
+    print "lightValue:", lightValue
+    print "temperatureValue:", temperatureValue
+
+  # hang out and do nothing for a half second
+  time.sleep(5)
