@@ -14,7 +14,7 @@
 # the License.
 ##
 
-import jprops
+import yaml
 import paho.mqtt.client as mqtt
 import json
 import sys
@@ -43,7 +43,9 @@ def on_message(client, userdata, msg):
 # A Java properties file is being used so that the same properties can
 # be used in both languages.
 with open(sys.argv[1]) as fp:
-  properties = jprops.load_properties(fp)
+  properties = yaml.safe_load(fp)
+
+print properties
 
 # Create the client.
 client = mqtt.Client()

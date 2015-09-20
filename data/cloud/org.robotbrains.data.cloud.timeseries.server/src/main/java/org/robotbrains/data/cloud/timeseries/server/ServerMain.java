@@ -15,6 +15,8 @@
  */
 package org.robotbrains.data.cloud.timeseries.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.logging.log4j.Logger;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.PahoMqttRemoteDataRelay;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
@@ -22,8 +24,7 @@ import org.robotbrains.data.cloud.timeseries.server.database.KairosDbDatabaseRel
 import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * The main driver for the time series cloud.
@@ -54,6 +55,11 @@ public class ServerMain {
    * The remote data relay.
    */
   private RemoteDataRelay remoteDataRelay;
+  
+  /**
+   * The connection to the timeseries database.
+   */
+  private KairosDbDatabaseRelay databaseRelay;
 
   public ServerMain(String configFileLocation) {
     this.configFileLocation = configFileLocation;
@@ -66,8 +72,9 @@ public class ServerMain {
    *           the application was unable to start
    */
   public void startup() throws Exception {
-    Properties configuration = new Properties();
-    configuration.load(new FileInputStream(new File(configFileLocation)));
+    ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+    @SuppressWarnings("unchecked")
+    Map<String, String> configuration = mapper.readValue(new File(configFileLocation), Map.class);
 
     Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
     loggingProvider.startup();
@@ -76,7 +83,7 @@ public class ServerMain {
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     remoteDataRelay.startup();
     
-    KairosDbDatabaseRelay databaseRelay = new KairosDbDatabaseRelay();
+    databaseRelay = new KairosDbDatabaseRelay(configuration, log);
     databaseRelay.startup();
   }
 
@@ -85,5 +92,6 @@ public class ServerMain {
    */
   public void shutdown() {
     remoteDataRelay.shutdown();
+    databaseRelay.shutdown();
   }
 }

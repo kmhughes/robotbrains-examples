@@ -96,7 +96,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
   /**
    * The configuration for the application.
    */
-  private Properties configuration;
+  private Map<String, String> configuration;
 
   /**
    * The remote data relay listeners.
@@ -108,7 +108,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    */
   private Logger log;
 
-  public PahoMqttRemoteDataRelay(Properties configuration, Logger log) {
+  public PahoMqttRemoteDataRelay(Map<String, String> configuration, Logger log) {
     this.configuration = configuration;
     this.log = log;
   }
@@ -150,16 +150,16 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
 
       MqttConnectOptions options = new MqttConnectOptions();
       options.setCleanSession(true);
-      options.setUserName(configuration.getProperty(CONFIGURATION_NAME_MQTT_USERNAME));
+      options.setUserName(configuration.get(CONFIGURATION_NAME_MQTT_USERNAME));
       options
-          .setPassword(configuration.getProperty(CONFIGURATION_NAME_MQTT_PASSWORD).toCharArray());
+          .setPassword(configuration.get(CONFIGURATION_NAME_MQTT_PASSWORD).toCharArray());
 
       log.info("Connecting to broker: %s", mqttClient.getServerURI());
       mqttClient.connect(options);
 
       log.info("Connected to MQTT broker");
 
-      String topicIncoming = configuration.getProperty(CONFIGURATION_NAME_TOPIC_INCOMING);
+      String topicIncoming = configuration.get(CONFIGURATION_NAME_TOPIC_INCOMING);
       mqttClient.subscribe(topicIncoming);
     } catch (Exception e) {
       log.error("Error during MQTT connect", e);
