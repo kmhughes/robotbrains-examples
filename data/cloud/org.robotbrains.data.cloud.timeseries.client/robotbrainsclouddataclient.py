@@ -19,12 +19,13 @@ import paho.mqtt.client as mqtt
 import json
 import sys
 import time
+import signal
 import RPi.GPIO as GPIO
 
 # Raspberry Pi GPIO bit-banging code
 # Written by Limor "Ladyada" Fried for Adafruit Industries, (c) 2015
 # This code is released into the public domain
- 
+
 # read SPI data from MCP3008 chip, 8 possible adc's (0 thru 7)
 def readadc(adcnum, clockpin, mosipin, misopin, cspin):
   if ((adcnum > 7) or (adcnum < 0)):
@@ -69,15 +70,19 @@ def on_connect(client, userdata, rc):
     if rc == 0:
       # Subscribing in on_connect() means that if we lose the connection and
       # reconnect then subscriptions will be renewed.
-      topicOutgoing = properties['smartspaces.cloud.timeseries.topic.incoming']
       client.subscribe(topicOutgoing)
-      data = { 'foo' : 1}
-      client.publish(topicOutgoing, json.dumps(data))
 
 # The callback for when te MQTT client receives a publiched message for a
 # topic it is subscribed to
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
+
+# Signal handler for sigint
+def signal_handler(signal, frame):
+  mqttClient.loop_stop()
+  sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 # Read the properties that define user names and passwords.
 #
@@ -98,10 +103,14 @@ SPIMOSI = 16
 SPICS = 12
 
 # set up the SPI interface pins
+GPIO.setwarnings(False)
 GPIO.setup(SPIMOSI, GPIO.OUT)
 GPIO.setup(SPIMISO, GPIO.IN)
 GPIO.setup(SPICLK, GPIO.OUT)
 GPIO.setup(SPICS, GPIO.OUT)
+
+# Create the outgoing topic for data
+topicOutgoing = properties['smartspaces.cloud.timeseries.topic.incoming']
 
 # Create the MQTT client.
 mqttClient = mqtt.Client()
@@ -118,7 +127,7 @@ mqttClient.connect(properties['mqtt.server.host'], int(properties['mqtt.server.p
 
 # This method will not return and will continually loop to receive network
 # traffic.
-#mqttClient.loop_forever()
+mqttClient.loop_start()
      
 # Light sensor connected to adc #0
 light_sensor = 0;
@@ -130,12 +139,35 @@ DEBUG = 1
 
 while True:
   # read the sensors
+  timestamp = int(round(time.time() * 1000))
   lightValue = readadc(light_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
   temperatureValue = readadc(temperature_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
  
   if DEBUG:
     print "lightValue:", lightValue
     print "temperatureValue:", temperatureValue
+
+  message = {
+    'type': 'data.sensor',
+    'data': {
+      'source': 'keith.test',
+      'sensingunit': 'pi2',
+      'sensor.data': [
+        {
+          'sensor': 'temperature',
+          'value': temperatureValue,
+          'timestamp': timestamp
+          },
+        {
+          'sensor': 'light',
+          'value' : lightValue,
+          'timestamp': timestamp
+          }
+        ]
+      }
+    }
+
+  mqttClient.publish(topicOutgoing, json.dumps(message))
 
   # hang out and do nothing for a half second
   time.sleep(5)

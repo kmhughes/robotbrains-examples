@@ -16,7 +16,7 @@
 
 package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
 
-import java.util.Map;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
 
 /**
  * A listener for messages from a remote data relay.
@@ -31,5 +31,5 @@ public interface RemoteDataRelayListener {
    * @param data
    *          the new data
    */
-   void onNewData(Map<String, Object> data);
+   void onNewData(SensorData data);
 }

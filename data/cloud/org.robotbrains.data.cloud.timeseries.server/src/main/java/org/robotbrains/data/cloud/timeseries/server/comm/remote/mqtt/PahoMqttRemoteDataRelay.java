@@ -25,10 +25,14 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
+import org.robotbrains.interactivespaces.util.data.dynamic.DynamicObject;
+import org.robotbrains.interactivespaces.util.data.dynamic.DynamicObject.ArrayDynamicObjectEntry;
+import org.robotbrains.interactivespaces.util.data.dynamic.StandardDynamicObjectNavigator;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -151,8 +155,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
       MqttConnectOptions options = new MqttConnectOptions();
       options.setCleanSession(true);
       options.setUserName(configuration.get(CONFIGURATION_NAME_MQTT_USERNAME));
-      options
-          .setPassword(configuration.get(CONFIGURATION_NAME_MQTT_PASSWORD).toCharArray());
+      options.setPassword(configuration.get(CONFIGURATION_NAME_MQTT_PASSWORD).toCharArray());
 
       log.info("Connecting to broker: %s", mqttClient.getServerURI());
       mqttClient.connect(options);
@@ -197,11 +200,64 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    */
   private void handleMessageArrived(String topic, MqttMessage message) {
     String messagePaylog = new String(message.getPayload());
-    Map<String, Object> data = parseJsonObject(messagePaylog);
+    Map<String, Object> messageData = parseJsonObject(messagePaylog);
 
-    log.info("Got message on topic %s with content %s", topic, data);
-    
-    notifyListenersOfNewData(data);
+    log.debug("Got message on topic %s with content %s", topic, messageData);
+
+    processIncomingMessage(messageData);
+
+  }
+
+  /**
+   * Process an incoming message.
+   * 
+   * @param messageData
+   *          the message data
+   */
+  private void processIncomingMessage(Map<String, Object> messageData) {
+    DynamicObject object = new StandardDynamicObjectNavigator(messageData);
+    String messageType = object.getRequiredString("type");
+    switch (messageType) {
+      case "data.sensor":
+        processSensorDataMessage(object);
+        break;
+      default:
+        log.info("Got unknown message type %s", messageType);
+    }
+  }
+
+  /**
+   * Process a sensor data message.
+   * 
+   * <p>
+   * The data object is in the envelope data, not the data area itself.
+   * 
+   * @param object
+   *          the dynamic object containing the data
+   */
+  private void processSensorDataMessage(DynamicObject object) {
+    object.down("data");
+
+    String source = object.getString("source");
+    String sensingUnit = object.getString("sensingunit");
+
+    SensorData sensorData = new SensorData(source, sensingUnit);
+
+    object.down("sensor.data");
+
+    for (ArrayDynamicObjectEntry sensorDataEntry : object.getArrayEntries()) {
+      DynamicObject data = sensorDataEntry.down();
+      String sensor = data.getRequiredString("sensor");
+      Double value = data.getDouble("value");
+      long timestamp = data.getDouble("timestamp").longValue();
+
+      SensorDataSample sample = new SensorDataSample(sensor, value, timestamp);
+      sensorData.addSample(sample);
+
+      log.info("Got sample %s", sample);
+
+      notifyListenersOfNewData(sensorData);
+    }
   }
 
   /**
@@ -239,11 +295,12 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
   }
 
   /**
-   * Notify all listeners of new data.
+   * Notify all listeners of new sensor data.
    * 
    * @param data
+   *          the new sensor data
    */
-  private void notifyListenersOfNewData(Map<String, Object> data) {
+  private void notifyListenersOfNewData(SensorData data) {
     for (RemoteDataRelayListener listener : listeners) {
       try {
         listener.onNewData(data);

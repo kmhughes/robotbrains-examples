@@ -55,7 +55,7 @@ public class ServerMain {
    * The remote data relay.
    */
   private RemoteDataRelay remoteDataRelay;
-  
+
   /**
    * The connection to the timeseries database.
    */
@@ -72,9 +72,7 @@ public class ServerMain {
    *           the application was unable to start
    */
   public void startup() throws Exception {
-    ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-    @SuppressWarnings("unchecked")
-    Map<String, String> configuration = mapper.readValue(new File(configFileLocation), Map.class);
+    Map<String, String> configuration = readConfiguration();
 
     Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
     loggingProvider.startup();
@@ -82,9 +80,9 @@ public class ServerMain {
 
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     remoteDataRelay.startup();
-    
-    databaseRelay = new KairosDbDatabaseRelay(configuration, log);
-    databaseRelay.startup();
+
+    // databaseRelay = new KairosDbDatabaseRelay(configuration, log);
+    // databaseRelay.startup();
   }
 
   /**
@@ -92,6 +90,23 @@ public class ServerMain {
    */
   public void shutdown() {
     remoteDataRelay.shutdown();
-    databaseRelay.shutdown();
+    // databaseRelay.shutdown();
+  }
+
+  /**
+   * Read the configuration.
+   * 
+   * @return the configuration
+   * 
+   * @throws Exception
+   *           was unable to read the configuration file or could not parse the
+   *           configuration
+   */
+  private Map<String, String> readConfiguration() throws Exception {
+    ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+
+    @SuppressWarnings("unchecked")
+    Map<String, String> configuration = mapper.readValue(new File(configFileLocation), Map.class);
+    return configuration;
   }
 }
