@@ -20,8 +20,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.logging.log4j.Logger;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.PahoMqttRemoteDataRelay;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import org.robotbrains.data.cloud.timeseries.server.database.KairosDbDatabaseRelay;
 import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
+import rx.Subscription;
 
 import java.io.File;
 import java.util.Map;
@@ -81,8 +83,16 @@ public class ServerMain {
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     remoteDataRelay.startup();
 
-    // databaseRelay = new KairosDbDatabaseRelay(configuration, log);
-    // databaseRelay.startup();
+    Subscription subscription = remoteDataRelay.getSensorDataObservable().subscribe(sensorData -> {
+      log.info("Got data from source %s, sensing unit %s", sensorData.getSource(),
+          sensorData.getSensingUnit());
+      for (SensorDataSample sample : sensorData.getSamples()) {
+        log.info("\tData %s %f %d", sample.getSensor(), sample.getValue(), sample.getTimestamp());
+      }
+    });
+
+    databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
+    databaseRelay.startup();
   }
 
   /**

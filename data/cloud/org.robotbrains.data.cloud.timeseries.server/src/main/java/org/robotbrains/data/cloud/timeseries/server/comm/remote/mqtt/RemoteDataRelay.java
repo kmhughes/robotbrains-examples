@@ -16,6 +16,9 @@
 
 package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
 
+import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
+import rx.Observable;
+
 /**
  * The remote data relay transfers data in and out of the server.
  * 
@@ -32,23 +35,11 @@ public interface RemoteDataRelay {
    * Shut the relay down.
    */
   void shutdown();
-
-  /**
-   * Add a new remote data listener.
-   * 
-   * @param listener
-   *          the listener to add
-   */
-  void addRemoteDataRelayListener(RemoteDataRelayListener listener);
   
   /**
-   * Remove a remote data listener.
+   * Get an observable for the data relay.
    * 
-   * <p>
-   * Does nothing if the listener was never added.
-   * 
-   * @param listener
-   *          the listener to add
+   * @return the observable
    */
-  void removeRemoteDataRelayListener(RemoteDataRelayListener listener);
+  Observable<SensorData> getSensorDataObservable();
 }

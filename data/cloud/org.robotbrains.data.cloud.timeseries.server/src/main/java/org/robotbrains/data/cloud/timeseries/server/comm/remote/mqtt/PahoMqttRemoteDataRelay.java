@@ -30,6 +30,10 @@ import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import org.robotbrains.interactivespaces.util.data.dynamic.DynamicObject;
 import org.robotbrains.interactivespaces.util.data.dynamic.DynamicObject.ArrayDynamicObjectEntry;
 import org.robotbrains.interactivespaces.util.data.dynamic.StandardDynamicObjectNavigator;
+import rx.Observable;
+import rx.Observable.OnSubscribe;
+import rx.Subscriber;
+import rx.observers.Subscribers;
 
 import java.util.List;
 import java.util.Map;
@@ -105,7 +109,18 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
   /**
    * The remote data relay listeners.
    */
-  private List<RemoteDataRelayListener> listeners = new CopyOnWriteArrayList<>();
+  private List<Subscriber<SensorData>> subscribers = new CopyOnWriteArrayList<>();
+
+  /**
+   * The observable
+   */
+  private Observable<SensorData> observable = Observable.create(new OnSubscribe<SensorData>() {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void call(Subscriber<? super SensorData> t) {
+      subscribers.add((Subscriber<SensorData>) t);
+    }
+  });
 
   /**
    * The logger to use.
@@ -115,16 +130,6 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
   public PahoMqttRemoteDataRelay(Map<String, String> configuration, Logger log) {
     this.configuration = configuration;
     this.log = log;
-  }
-
-  @Override
-  public void addRemoteDataRelayListener(RemoteDataRelayListener listener) {
-    listeners.add(listener);
-  }
-
-  @Override
-  public void removeRemoteDataRelayListener(RemoteDataRelayListener listener) {
-    listeners.add(listener);
   }
 
   @Override
@@ -178,6 +183,11 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
         log.error("Error during MQTT disconnect", e);
       }
     }
+  }
+
+  @Override
+  public Observable<SensorData> getSensorDataObservable() {
+    return observable;
   }
 
   /**
@@ -256,7 +266,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
 
       log.info("Got sample %s", sample);
 
-      notifyListenersOfNewData(sensorData);
+      notifySubscribersOfNewData(sensorData);
     }
   }
 
@@ -300,12 +310,14 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    * @param data
    *          the new sensor data
    */
-  private void notifyListenersOfNewData(SensorData data) {
-    for (RemoteDataRelayListener listener : listeners) {
-      try {
-        listener.onNewData(data);
-      } catch (Throwable e) {
-        log.error("Error while running remote data listener handler", e);
+  private void notifySubscribersOfNewData(SensorData data) {
+    for (Subscriber<SensorData> subscriber : subscribers) {
+      if (!subscriber.isUnsubscribed()) {
+        try {
+          subscriber.onNext(data);
+        } catch (Throwable e) {
+          log.error("Error while running remote data subscriber", e);
+        }
       }
     }
   }
