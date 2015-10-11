@@ -24,8 +24,9 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslContext;
 
 /**
+ * A Netty channel initialize for setting up a web server.
+ * 
  * @author Keith M. Hughes
- *
  */
 public class NettyWebServerInitializer extends ChannelInitializer<SocketChannel> {
 
