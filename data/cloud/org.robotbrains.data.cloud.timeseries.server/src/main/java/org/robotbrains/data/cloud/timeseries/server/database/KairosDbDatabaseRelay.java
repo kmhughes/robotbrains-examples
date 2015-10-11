@@ -1,9 +1,26 @@
-/**
- * 
+/*
+ * Copyright (C) 2015 Keith M. Hughes.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of
+ * the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
+
 package org.robotbrains.data.cloud.timeseries.server.database;
 
+import interactivespaces.InteractiveSpacesException;
+import interactivespaces.util.resource.ManagedResource;
+
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 import org.kairosdb.client.HttpClient;
 import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.builder.QueryBuilder;
@@ -21,10 +38,15 @@ import java.util.Date;
 import java.util.Map;
 
 /**
+ * Data database relay that uses KairosDB as a backend.
+ * 
  * @author Keith M. Hughes
- *
  */
-public class KairosDbDatabaseRelay {
+public class KairosDbDatabaseRelay implements ManagedResource {
+
+  /**
+   * The URL for connecting to the Kairos database.
+   */
   private static final String KAIROS_CONNECTION_URL = "http://localhost:8090";
 
   /**
@@ -38,13 +60,16 @@ public class KairosDbDatabaseRelay {
   private Map<String, String> configuration;
 
   /**
-   * The logger.
+   * The client for communicating with KairosDB.
    */
-  private Logger log;
-
   private HttpClient kairosdbClient;
 
   private Subscription remoteDataRelaySubscription;
+
+  /**
+   * The logger.
+   */
+  private Logger log;
 
   /**
    * Construct a new relay.
@@ -63,41 +88,31 @@ public class KairosDbDatabaseRelay {
     this.log = log;
   }
 
-  /**
-   * Start up the database relay.
-   * 
-   * @throws Exception
-   */
-  public void startup() throws Exception {
-    kairosdbClient = new HttpClient(KAIROS_CONNECTION_URL);
+  @Override
+  public void startup() {
+    try {
+      kairosdbClient = new HttpClient(KAIROS_CONNECTION_URL);
 
-    GetResponse metricResponse = kairosdbClient.getMetricNames();
+      testQueryDatabase();
 
-    log.info("Metric Response Code =" + metricResponse.getStatusCode());
-    for (String name : metricResponse.getResults()) {
-      log.info(name);
+      remoteDataRelaySubscription = remoteDataRelay.getSensorDataObservable()
+          .subscribe(sensorData -> processSensorData(sensorData));
+    } catch (Throwable e) {
+      throw InteractiveSpacesException.newFormattedException(e,
+          "Could not start up KairosDB database relay");
     }
-
-    QueryBuilder builder = QueryBuilder.getInstance();
-    builder.setStart(new Date(0)).addMetric("experimental.metric1");
-    QueryResponse response = kairosdbClient.query(builder);
-    for (Queries queries : response.getQueries()) {
-      for (Results results : queries.getResults()) {
-        log.info(results.getName() + results.getDataPoints());
-      }
-    }
-
-    remoteDataRelaySubscription = remoteDataRelay.getSensorDataObservable()
-        .subscribe(sensorData -> processSensorData(sensorData));
   }
 
-  /**
-   * Shut the relay down.
-   */
-  public void shutdown() throws Exception {
+  @Override
+  public void shutdown() {
     remoteDataRelaySubscription.unsubscribe();
 
-    kairosdbClient.shutdown();
+    try {
+      kairosdbClient.shutdown();
+    } catch (Throwable e) {
+      throw InteractiveSpacesException.newFormattedException(e,
+          "Could not shut down KairosDB database relay");
+    }
   }
 
   /**
@@ -113,13 +128,66 @@ public class KairosDbDatabaseRelay {
       String eventKey = eventKeyPrefix + sample.getSensor();
       MetricBuilder builder = MetricBuilder.getInstance();
 
-      builder.addMetric(eventKey).addDataPoint(sample.getTimestamp(), sample.getValue());
+      builder.addMetric(eventKey).addTag("sensor", "snapshot").addDataPoint(sample.getTimestamp(),
+          sample.getValue());
 
       try {
         Response pushResponse = kairosdbClient.pushMetrics(builder);
+        
+        // This should come in as a 204.
         log.info("Push Response Code =" + pushResponse.getStatusCode());
       } catch (Throwable e) {
         log.error(String.format("Failed while writing data point %s", eventKey), e);
+      }
+    }
+  }
+
+  /**
+   * Perform some test queries on the database.
+   * 
+   * @throws Exception
+   *           something bad happened when querying the database
+   */
+  private void testQueryDatabase() throws Exception {
+    GetResponse metricResponse = kairosdbClient.getMetricNames();
+
+    log.info("Metric Response Code =" + metricResponse.getStatusCode());
+    for (String name : metricResponse.getResults()) {
+      log.info(name);
+    }
+
+    DateTime startTime = new DateTime(0);
+    DateTime endTime = DateTime.now();
+
+    performMetricQuery("keith.test_pi2_light", startTime, endTime);
+    performMetricQuery("keith.test_pi2_temperature", startTime, endTime);
+  }
+
+  /**
+   * Perform a metric query on the database.
+   * 
+   * @param metricName
+   *          the name of the metric
+   * @param startTime
+   *        the start of the time range for the query
+   * @param endTime
+   *        the start of the time range for the query
+   * 
+   * @throws Exception
+   *           something bad happened when querying the database
+   */
+  private void performMetricQuery(String metricName, DateTime startTime, DateTime endTime)
+      throws Exception {
+    log.info("Getting metric %s from time %s to time %s", metricName, startTime, endTime);
+    
+    QueryBuilder builder = QueryBuilder.getInstance();
+    builder.setStart(startTime.toDate()).setEnd(endTime.toDate());
+
+    builder.addMetric(metricName);
+    QueryResponse response = kairosdbClient.query(builder);
+    for (Queries queries : response.getQueries()) {
+      for (Results results : queries.getResults()) {
+        log.info(results.getName() + results.getDataPoints());
       }
     }
   }

@@ -23,6 +23,7 @@ import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataR
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import org.robotbrains.data.cloud.timeseries.server.database.KairosDbDatabaseRelay;
 import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
+import org.robotbrains.support.ManagedResources;
 import rx.Subscription;
 
 import java.io.File;
@@ -59,10 +60,21 @@ public class ServerMain {
   private RemoteDataRelay remoteDataRelay;
 
   /**
+   * The reources the server maintains, such as data base connections, etc.
+   */
+  private ManagedResources managedResources;
+
+  /**
    * The connection to the timeseries database.
    */
   private KairosDbDatabaseRelay databaseRelay;
 
+  /**
+   * Construct a server.
+   * 
+   * @param configFileLocation
+   *          the location of the configuration file
+   */
   public ServerMain(String configFileLocation) {
     this.configFileLocation = configFileLocation;
   }
@@ -80,8 +92,10 @@ public class ServerMain {
     loggingProvider.startup();
     Logger log = loggingProvider.getLog();
 
+    managedResources = new ManagedResources(log);
+
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
-    remoteDataRelay.startup();
+    managedResources.addResource(remoteDataRelay);
 
     Subscription subscription = remoteDataRelay.getSensorDataObservable().subscribe(sensorData -> {
       log.info("Got data from source %s, sensing unit %s", sensorData.getSource(),
@@ -92,15 +106,16 @@ public class ServerMain {
     });
 
     databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
-    databaseRelay.startup();
+    managedResources.addResource(databaseRelay);
+
+    managedResources.startupResources();
   }
 
   /**
    * Shut down the server.
    */
   public void shutdown() {
-    remoteDataRelay.shutdown();
-    // databaseRelay.shutdown();
+    managedResources.shutdownResourcesAndClear();
   }
 
   /**

@@ -31,6 +31,8 @@ dependencies {
   compile 'joda-time:joda-time:2.8.2'
   compile 'org.kairosdb:client:2.0'
   compile 'io.reactivex:rxjava:1.0.14'
+  compile 'io.netty:netty-all:4.0.31.Final'
+  compile 'org.freemarker:freemarker:2.3.23'
 }
 
 repositories {

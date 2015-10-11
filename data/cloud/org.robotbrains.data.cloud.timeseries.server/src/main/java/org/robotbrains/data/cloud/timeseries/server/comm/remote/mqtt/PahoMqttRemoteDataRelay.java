@@ -33,7 +33,6 @@ import org.robotbrains.interactivespaces.util.data.dynamic.StandardDynamicObject
 import rx.Observable;
 import rx.Observable.OnSubscribe;
 import rx.Subscriber;
-import rx.observers.Subscribers;
 
 import java.util.List;
 import java.util.Map;
@@ -117,8 +116,8 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
   private Observable<SensorData> observable = Observable.create(new OnSubscribe<SensorData>() {
     @SuppressWarnings("unchecked")
     @Override
-    public void call(Subscriber<? super SensorData> t) {
-      subscribers.add((Subscriber<SensorData>) t);
+    public void call(Subscriber<? super SensorData> subscriber) {
+      subscribers.add((Subscriber<SensorData>) subscriber);
     }
   });
 
@@ -127,6 +126,14 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    */
   private Logger log;
 
+  /**
+   * Construct a new relay.
+   * 
+   * @param configuration
+   *          the configuration for the relay
+   * @param log
+   *          the logger to use
+   */
   public PahoMqttRemoteDataRelay(Map<String, String> configuration, Logger log) {
     this.configuration = configuration;
     this.log = log;

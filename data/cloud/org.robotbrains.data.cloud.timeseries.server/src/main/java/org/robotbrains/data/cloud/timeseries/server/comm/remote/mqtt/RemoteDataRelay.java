@@ -16,6 +16,8 @@
 
 package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
 
+import interactivespaces.util.resource.ManagedResource;
+
 import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
 import rx.Observable;
 
@@ -24,17 +26,7 @@ import rx.Observable;
  * 
  * @author Keith M. Hughes
  */
-public interface RemoteDataRelay {
-
-  /**
-   * Start up the relay.
-   */
-  void startup();
-  
-  /**
-   * Shut the relay down.
-   */
-  void shutdown();
+public interface RemoteDataRelay extends ManagedResource {
   
   /**
    * Get an observable for the data relay.
