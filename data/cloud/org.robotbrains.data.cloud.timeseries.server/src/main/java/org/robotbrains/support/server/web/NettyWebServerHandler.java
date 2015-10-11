@@ -49,6 +49,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+/**
+ * A Netty channel handler for a web server.
+ * 
+ * @author Keith M. Hughes
+ */
 public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
 
   /**
