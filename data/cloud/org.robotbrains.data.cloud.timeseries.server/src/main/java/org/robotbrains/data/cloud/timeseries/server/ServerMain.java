@@ -106,7 +106,7 @@ public class ServerMain {
     });
 
     databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
-    managedResources.addResource(databaseRelay);
+    //managedResources.addResource(databaseRelay);
 
     managedResources.startupResources();
   }

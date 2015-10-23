@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ##
 # Copyright (C) 2015 Keith M. Hughes.
 #
@@ -21,6 +23,12 @@ import sys
 import time
 import signal
 import RPi.GPIO as GPIO
+
+# 0 if no debug, 1 if debug
+DEBUG = 1
+
+# The number of seconds between sampling periods
+SAMPLING_PERIOD=5
 
 # Raspberry Pi GPIO bit-banging code
 # Written by Limor "Ladyada" Fried for Adafruit Industries, (c) 2015
@@ -64,10 +72,12 @@ def readadc(adcnum, clockpin, mosipin, misopin, cspin):
 # The callback for when the MQTT client gets an acknowledgement from the MQTT
 # server.
 def on_connect(client, userdata, rc):
-    print("Connected with result code "+str(rc))
+  if DEBUG:
+    print("Connected to message broker with result code "+str(rc))
 
-    # Only subscribe if the connection was successful
-    if rc == 0:
+  # Only subscribe if the connection was successful
+  if rc == 0:
+    if DEBUG:
       # Subscribing in on_connect() means that if we lose the connection and
       # reconnect then subscriptions will be renewed.
       client.subscribe(topicOutgoing)
@@ -135,8 +145,6 @@ light_sensor = 0;
 # Temperature sensor connected to adc #1
 temperature_sensor = 1
 
-DEBUG = 1
-
 while True:
   # read the sensors
   timestamp = int(round(time.time() * 1000))
@@ -169,5 +177,5 @@ while True:
 
   mqttClient.publish(topicOutgoing, json.dumps(message))
 
-  # hang out and do nothing for a half second
-  time.sleep(5)
+  # Wait the sampling period before sampling again
+  time.sleep(SAMPLING_PERIOD)
