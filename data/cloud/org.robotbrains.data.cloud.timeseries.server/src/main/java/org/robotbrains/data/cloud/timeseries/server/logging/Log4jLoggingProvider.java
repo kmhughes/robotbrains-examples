@@ -16,12 +16,17 @@
 
 package org.robotbrains.data.cloud.timeseries.server.logging;
 
+import com.google.common.io.Closeables;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.Configurator;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * A logging provider that uses Log4J
@@ -29,19 +34,53 @@ import java.io.IOException;
  * @author Keith M. Hughes
  */
 public class Log4jLoggingProvider {
-  
+
+  /**
+   * Path to the configuration file.
+   * 
+   * <p>
+   * Can be {@code null}.
+   */
+  private String configurationFilePath;
+
+  /**
+   * Construct a new logging provider.
+   * 
+   * @param configurationFilePath
+   *          path to the configuration file, can be {@code null}.
+   */
+  public Log4jLoggingProvider(String configurationFilePath) {
+    this.configurationFilePath = configurationFilePath;
+  }
+
   /**
    * Start the logging provider.
    */
   public void startup() {
+    InputStream configurationStream = null;
     try {
-      Configurator.initialize(null, new ConfigurationSource(getClass().getClassLoader().getResourceAsStream("log4j.xml")));
+      ConfigurationSource source;
+      if (configurationFilePath != null) {
+        File configurationFile = new File(configurationFilePath);
+        configurationStream = new FileInputStream(configurationFile);
+        source = new ConfigurationSource(configurationStream, configurationFile);
+      } else {
+        configurationStream = getClass().getClassLoader().getResourceAsStream("log4j.xml");
+        source = new ConfigurationSource(configurationStream);
+      }
+      Configurator.initialize(null, source);
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
+    } finally {
+      try {
+        Closeables.close(configurationStream, true);
+      } catch (IOException e) {
+        // Won't happen
+      }
     }
   }
-  
+
   /**
    * Get the logger for the application.
    * 

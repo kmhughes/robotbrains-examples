@@ -135,7 +135,7 @@ public class KairosDbDatabaseRelay implements ManagedResource {
         Response pushResponse = kairosdbClient.pushMetrics(builder);
         
         // This should come in as a 204.
-        log.info("Push Response Code =" + pushResponse.getStatusCode());
+        log.debug("Push Response Code =" + pushResponse.getStatusCode());
       } catch (Throwable e) {
         log.error(String.format("Failed while writing data point %s", eventKey), e);
       }

@@ -1,0 +1,18 @@
+[Unit]
+Description=RobotBrains Cloud Data Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+PIDFile=/var/run/robotbrainsclouddataserver.pid
+# Note the -f: don't fail if there is no PID file
+ExecStartPre=/bin/rm -f /var/run/robotbrainsclouddataserver.pid
+ExecStart=/opt/robotbrainsclouddataserver/bin/org.robotbrains.data.cloud.timeseries.server \
+ -c /opt/robotbrainsclouddataserver/config/smartspacescloud.yaml \
+ -l /opt/robotbrainsclouddataserver/config/log4j.xml
+  Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

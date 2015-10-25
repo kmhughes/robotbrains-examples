@@ -40,7 +40,7 @@ import java.util.Map;
  */
 public class ServerMain {
 
-  private static final String COMMAND_ARG_LOG_LEVEL = "l";
+  private static final String COMMAND_ARG_LOG_FILEPATH = "l";
 
   private static final String COMMAND_ARG_DATABASE = "d";
 
@@ -99,14 +99,15 @@ public class ServerMain {
     Options options = new Options();
     options.addOption(COMMAND_ARG_DATABASE, false, "do not enable the database transfer");
     options.addOption(COMMAND_ARG_CONFIG, true, "the configuration file");
-    options.addOption(COMMAND_ARG_LOG_LEVEL, true, "the log level");
+    options.addOption(COMMAND_ARG_LOG_FILEPATH, true, "path to the log configuration file");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
     Map<String, String> configuration = readConfiguration(cmd);
 
-    Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
+    Log4jLoggingProvider loggingProvider =
+        new Log4jLoggingProvider(cmd.getOptionValue(COMMAND_ARG_LOG_FILEPATH));
     loggingProvider.startup();
     Logger log = loggingProvider.getLog();
 
@@ -116,10 +117,10 @@ public class ServerMain {
     managedResources.addResource(remoteDataRelay);
 
     Subscription subscription = remoteDataRelay.getSensorDataObservable().subscribe(sensorData -> {
-      log.info("Got data from source %s, sensing unit %s", sensorData.getSource(),
+      log.debug("Got data from source %s, sensing unit %s", sensorData.getSource(),
           sensorData.getSensingUnit());
       for (SensorDataSample sample : sensorData.getSamples()) {
-        log.info("\tData %s %f %d", sample.getSensor(), sample.getValue(), sample.getTimestamp());
+        log.debug("\tData %s %f %d", sample.getSensor(), sample.getValue(), sample.getTimestamp());
       }
     });
 

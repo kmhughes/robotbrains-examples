@@ -225,7 +225,6 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
     log.debug("Got message on topic %s with content %s", topic, messageData);
 
     processIncomingMessage(messageData);
-
   }
 
   /**
@@ -242,7 +241,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
         processSensorDataMessage(object);
         break;
       default:
-        log.info("Got unknown message type %s", messageType);
+        log.warn("Got unknown message type %s", messageType);
     }
   }
 
@@ -274,7 +273,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
       SensorDataSample sample = new SensorDataSample(sensor, value, timestamp);
       sensorData.addSample(sample);
 
-      log.info("Got sample %s", sample);
+      log.debug("Got sample %s", sample);
 
       notifySubscribersOfNewData(sensorData);
     }
