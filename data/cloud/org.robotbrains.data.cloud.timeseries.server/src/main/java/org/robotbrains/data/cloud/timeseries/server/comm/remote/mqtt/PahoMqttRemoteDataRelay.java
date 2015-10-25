@@ -52,9 +52,10 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
       "smartspaces.cloud.timeseries.topic.incoming";
 
   /**
-   * The client ID for this MQTT relay.
+   * The configuration name for the MQTT node name for this client.
    */
-  public static final String MQTT_CLIENT_ID = "/smartspaces/cloud/timseries/relay";
+  public static final String CONFIGURATION_NAME_NODE_NAME =
+      "smartspaces.cloud.timeseries.node.name";
 
   /**
    * The configuration name for the MQTT password.
@@ -145,7 +146,8 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
       String serverUri =
           String.format("tcp://%s:%s", configuration.get(CONFIGURATION_NAME_MQTT_SERVER_HOST),
               configuration.get(CONFIGURATION_NAME_MQTT_SERVER_PORT));
-      mqttClient = new MqttClient(serverUri, MQTT_CLIENT_ID, persistence);
+      mqttClient =
+          new MqttClient(serverUri, configuration.get(CONFIGURATION_NAME_NODE_NAME), persistence);
 
       mqttClient.setCallback(new MqttCallback() {
         @Override
@@ -169,7 +171,8 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
       options.setUserName(configuration.get(CONFIGURATION_NAME_MQTT_USERNAME));
       options.setPassword(configuration.get(CONFIGURATION_NAME_MQTT_PASSWORD).toCharArray());
 
-      log.info("Connecting to broker: %s", mqttClient.getServerURI());
+      log.info("Connecting to MQTT broker %s with client %s", mqttClient.getServerURI(),
+          mqttClient.getClientId());
       mqttClient.connect(options);
 
       log.info("Connected to MQTT broker");

@@ -17,6 +17,10 @@ package org.robotbrains.data.cloud.timeseries.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Options;
 import org.apache.logging.log4j.Logger;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.PahoMqttRemoteDataRelay;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
@@ -36,8 +40,12 @@ import java.util.Map;
  */
 public class ServerMain {
 
+  private static final String COMMAND_ARG_LOG_LEVEL = "l";
+
+  private static final String COMMAND_ARG_DATABASE = "d";
+
   public static void main(String[] args) throws Exception {
-    final ServerMain main = new ServerMain(args[0]);
+    final ServerMain main = new ServerMain(args);
     main.startup();
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -49,10 +57,12 @@ public class ServerMain {
     });
   }
 
+  private static final String COMMAND_ARG_CONFIG = "c";
+
   /**
-   * Location of the configuration file.
+   * The arguments from the command line.
    */
-  private String configFileLocation;
+  private String[] args;
 
   /**
    * The remote data relay.
@@ -75,8 +85,8 @@ public class ServerMain {
    * @param configFileLocation
    *          the location of the configuration file
    */
-  public ServerMain(String configFileLocation) {
-    this.configFileLocation = configFileLocation;
+  public ServerMain(String[] args) {
+    this.args = args;
   }
 
   /**
@@ -86,7 +96,15 @@ public class ServerMain {
    *           the application was unable to start
    */
   public void startup() throws Exception {
-    Map<String, String> configuration = readConfiguration();
+    Options options = new Options();
+    options.addOption(COMMAND_ARG_DATABASE, false, "do not enable the database transfer");
+    options.addOption(COMMAND_ARG_CONFIG, true, "the configuration file");
+    options.addOption(COMMAND_ARG_LOG_LEVEL, true, "the log level");
+
+    CommandLineParser parser = new DefaultParser();
+    CommandLine cmd = parser.parse(options, args);
+
+    Map<String, String> configuration = readConfiguration(cmd);
 
     Log4jLoggingProvider loggingProvider = new Log4jLoggingProvider();
     loggingProvider.startup();
@@ -105,8 +123,10 @@ public class ServerMain {
       }
     });
 
-    databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
-    //managedResources.addResource(databaseRelay);
+    if (!cmd.hasOption(COMMAND_ARG_DATABASE)) {
+      databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
+      managedResources.addResource(databaseRelay);
+    }
 
     managedResources.startupResources();
   }
@@ -127,11 +147,12 @@ public class ServerMain {
    *           was unable to read the configuration file or could not parse the
    *           configuration
    */
-  private Map<String, String> readConfiguration() throws Exception {
+  private Map<String, String> readConfiguration(CommandLine cmd) throws Exception {
     ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
     @SuppressWarnings("unchecked")
-    Map<String, String> configuration = mapper.readValue(new File(configFileLocation), Map.class);
+    Map<String, String> configuration =
+        mapper.readValue(new File(cmd.getOptionValue(COMMAND_ARG_CONFIG)), Map.class);
     return configuration;
   }
 }
