@@ -34,7 +34,6 @@ import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import rx.Subscription;
 
-import java.util.Date;
 import java.util.Map;
 
 /**
@@ -45,9 +44,22 @@ import java.util.Map;
 public class KairosDbDatabaseRelay implements ManagedResource {
 
   /**
+   * The configuration name for the hostname for the machine where KairosDB is
+   * running.
+   */
+  public static final String CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_HOST =
+      "database.kairosdb.connection.host";
+
+  /**
+   * The configuration name for the KairosDB port on the machine where KairosDB
+   * is running.
+   */
+  public static final String CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_PORT =
+      "database.kairosdb.connection.port";
+
+  /**
    * The URL for connecting to the Kairos database.
    */
-  private static final String KAIROS_CONNECTION_URL = "http://localhost:8090";
 
   /**
    * The data relay supplying data to this database relay.
@@ -64,6 +76,9 @@ public class KairosDbDatabaseRelay implements ManagedResource {
    */
   private HttpClient kairosdbClient;
 
+  /**
+   * The event subscription for receiving data from the remote data relay.
+   */
   private Subscription remoteDataRelaySubscription;
 
   /**
@@ -91,12 +106,17 @@ public class KairosDbDatabaseRelay implements ManagedResource {
   @Override
   public void startup() {
     try {
-      kairosdbClient = new HttpClient(KAIROS_CONNECTION_URL);
+      String kairosConnectionUrl = String.format("http://%s:%s",
+          configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_HOST),
+          configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_PORT));
+      kairosdbClient = new HttpClient(kairosConnectionUrl);
 
       testQueryDatabase();
 
       remoteDataRelaySubscription = remoteDataRelay.getSensorDataObservable()
           .subscribe(sensorData -> processSensorData(sensorData));
+      
+      log.info("Database relay for KairosDB at %s running", kairosConnectionUrl);
     } catch (Throwable e) {
       throw InteractiveSpacesException.newFormattedException(e,
           "Could not start up KairosDB database relay");
@@ -133,7 +153,7 @@ public class KairosDbDatabaseRelay implements ManagedResource {
 
       try {
         Response pushResponse = kairosdbClient.pushMetrics(builder);
-        
+
         // This should come in as a 204.
         log.debug("Push Response Code =" + pushResponse.getStatusCode());
       } catch (Throwable e) {
@@ -169,9 +189,9 @@ public class KairosDbDatabaseRelay implements ManagedResource {
    * @param metricName
    *          the name of the metric
    * @param startTime
-   *        the start of the time range for the query
+   *          the start of the time range for the query
    * @param endTime
-   *        the start of the time range for the query
+   *          the start of the time range for the query
    * 
    * @throws Exception
    *           something bad happened when querying the database
@@ -179,7 +199,7 @@ public class KairosDbDatabaseRelay implements ManagedResource {
   private void performMetricQuery(String metricName, DateTime startTime, DateTime endTime)
       throws Exception {
     log.info("Getting metric %s from time %s to time %s", metricName, startTime, endTime);
-    
+
     QueryBuilder builder = QueryBuilder.getInstance();
     builder.setStart(startTime.toDate()).setEnd(endTime.toDate());
 

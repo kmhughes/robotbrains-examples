@@ -24,11 +24,58 @@ import time
 import signal
 import RPi.GPIO as GPIO
 
+# 1 if the script should connect to the MQTT broker
+# 0 if the script should not connect to the MQTT broker
+CONNECT = 0
+
 # 0 if no debug, 1 if debug
 DEBUG = 1
 
 # The number of seconds between sampling periods
 SAMPLING_PERIOD=5
+
+# The source of the data.
+#
+# This is a string that identifies the collection of sensors, for example, everything in
+# your home.
+DATA_SOURCE = 'keith.test'
+
+# The actual sensing unit that is collecting the data.
+#
+# The thought here is that you would have multiple sensing units per data source.
+SENSING_UNIT = 'pi2'
+
+#
+# Set which pins on the MCP3008 are connected to which sensors.
+#
+     
+# The light sensor is connected to ADC #0
+LIGHT_SENSOR = 0;
+
+# The temperature sensor is connected to ADC #1
+TEMPERATURE_SENSOR = 1
+
+#
+# Setup for GPIO on Raspberry Pi
+#
+
+# The GPIO pins on the Raspberry Pi to be used for SPI for talking to the
+# MCP3008.
+SPI_CLK = 21
+SPI_MISO = 20
+SPI_MOSI = 16
+SPI_CS = 12
+
+# Prepare the Raspberry Pi GPIO pins for the MCP3008 ADC chip.
+ 
+GPIO.setmode(GPIO.BCM)
+
+# set up the SPI interface pins
+GPIO.setwarnings(False)
+GPIO.setup(SPI_MOSI, GPIO.OUT)
+GPIO.setup(SPI_MISO, GPIO.IN)
+GPIO.setup(SPI_CLK, GPIO.OUT)
+GPIO.setup(SPI_CS, GPIO.OUT)
 
 # Raspberry Pi GPIO bit-banging code
 # Written by Limor "Ladyada" Fried for Adafruit Industries, (c) 2015
@@ -69,25 +116,20 @@ def readadc(adcnum, clockpin, mosipin, misopin, cspin):
   adcout >>= 1       # first bit is 'null' so drop it
   return adcout
 
+#
+# Various MQTT routines.
+#
+
 # The callback for when the MQTT client gets an acknowledgement from the MQTT
-# server.
+# broker.
 def on_connect(client, userdata, rc):
   if DEBUG:
     print("Connected to message broker with result code "+str(rc))
 
-  # Only subscribe if the connection was successful
-  if rc == 0:
-    if DEBUG:
-      # Subscribing in on_connect() means that if we lose the connection and
-      # reconnect then subscriptions will be renewed.
-      client.subscribe(topicOutgoing)
-
-# The callback for when te MQTT client receives a publiched message for a
-# topic it is subscribed to
-def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
-
-# Signal handler for sigint
+# Signal handler for sigint.
+#
+# This is used to catch ^C to the client and will do any needed cleanup, for
+# example, shut down the connection to the MQTT broker.
 def signal_handler(signal, frame):
   mqttClient.loop_stop()
   sys.exit(0)
@@ -101,81 +143,69 @@ signal.signal(signal.SIGINT, signal_handler)
 with open(sys.argv[1]) as fp:
   properties = yaml.safe_load(fp)
 
-# Prepare the Raspberry Pi GPIO pins for the MCP3008 ADC chip.
- 
-GPIO.setmode(GPIO.BCM)
+# Only create the MQTT client if we are supposed to connect to the MQTT broker.
+if CONNECT:
+  # Create the outgoing topic for data
+  topicOutgoing = properties['smartspaces.cloud.timeseries.topic.incoming']
 
-# change these as desired - they're the pins connected from the
-# SPI port on the ADC to the Cobbler
-SPICLK = 21
-SPIMISO = 20
-SPIMOSI = 16
-SPICS = 12
+  # Create the MQTT client.
+  mqttClient = mqtt.Client()
 
-# set up the SPI interface pins
-GPIO.setwarnings(False)
-GPIO.setup(SPIMOSI, GPIO.OUT)
-GPIO.setup(SPIMISO, GPIO.IN)
-GPIO.setup(SPICLK, GPIO.OUT)
-GPIO.setup(SPICS, GPIO.OUT)
+  # Set the methods to use for connection
+  mqttClient.on_connect = on_connect
 
-# Create the outgoing topic for data
-topicOutgoing = properties['smartspaces.cloud.timeseries.topic.incoming']
+  # Set the user name and password from the properties
+  mqttClient.username_pw_set(properties['mqtt.username'], properties['mqtt.password'])
 
-# Create the MQTT client.
-mqttClient = mqtt.Client()
+  # Connect to the broker.
+  mqttClient.connect(properties['mqtt.server.host'], int(properties['mqtt.server.port']), 60)
 
-# Set the methods to use for connection and message receiving
-mqttClient.on_connect = on_connect
-mqttClient.on_message = on_message
+  # This method will not return and will continually loop to receive network
+  # traffic.
+  mqttClient.loop_start()
 
-# Set the user name and password from the properties
-mqttClient.username_pw_set(properties['mqtt.username'], properties['mqtt.password'])
+#
+# The sensor reading loop.
+#
 
-# Connect to the server.
-mqttClient.connect(properties['mqtt.server.host'], int(properties['mqtt.server.port']), 60)
-
-# This method will not return and will continually loop to receive network
-# traffic.
-mqttClient.loop_start()
-     
-# Light sensor connected to adc #0
-light_sensor = 0;
-
-# Temperature sensor connected to adc #1
-temperature_sensor = 1
+# This loop reads the sensors.
+# If DEBUG is 1, will print out the data on the console.
+# If CONNECT is 1, it will send data to the MQTT broker.
 
 while True:
   # read the sensors
   timestamp = int(round(time.time() * 1000))
-  lightValue = readadc(light_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
-  temperatureValue = readadc(temperature_sensor, SPICLK, SPIMOSI, SPIMISO, SPICS)
+  lightValue = readadc(LIGHT_SENSOR, SPI_CLK, SPI_MOSI, SPI_MISO, SPI_CS)
+  temperatureValue = readadc(TEMPERATURE_SENSOR, SPI_CLK, SPI_MOSI, SPI_MISO, SPI_CS)
  
+  # If supposed to, write the sensor values on the console.
   if DEBUG:
     print "lightValue:", lightValue
     print "temperatureValue:", temperatureValue
 
-  message = {
-    'type': 'data.sensor',
-    'data': {
-      'source': 'keith.test',
-      'sensingunit': 'pi2',
-      'sensor.data': [
-        {
-          'sensor': 'temperature',
-          'value': temperatureValue,
-          'timestamp': timestamp
-          },
-        {
-          'sensor': 'light',
-          'value' : lightValue,
-          'timestamp': timestamp
-          }
-        ]
+  # Write data to the MQTT broker if supposed to.
+  if CONNECT:
+    message = {
+      'type': 'data.sensor',
+      'data': {
+        'source': DATA_SOURCE,
+        'sensingunit': SENSING_UNIT,
+        'sensor.data': [
+          {
+            'sensor': 'temperature',
+            'value': temperatureValue,
+            'timestamp': timestamp
+            },
+          {
+            'sensor': 'light',
+            'value' : lightValue,
+            'timestamp': timestamp
+            }
+          ]
+        }
       }
-    }
 
-  mqttClient.publish(topicOutgoing, json.dumps(message))
+    mqttClient.publish(topicOutgoing, json.dumps(message))
 
   # Wait the sampling period before sampling again
   time.sleep(SAMPLING_PERIOD)
