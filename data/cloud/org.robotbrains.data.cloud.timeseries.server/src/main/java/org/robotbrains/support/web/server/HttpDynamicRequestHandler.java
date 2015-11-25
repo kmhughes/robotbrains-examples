@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Google Inc.
  * Copyright (C) 2015 Keith M. Hughes.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -13,35 +14,23 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.robotbrains.support.server.web;
 
-import interactivespaces.service.web.server.HttpRequest;
-import interactivespaces.service.web.server.HttpResponse;
+package org.robotbrains.support.web.server;
 
 /**
- * A handler for requests to the web server.
- * 
+ * A handler for HTTP requests.
+ *
  * @author Keith M. Hughes
  */
-public interface WebServerRequestHandler {
+public interface HttpDynamicRequestHandler {
 
   /**
-   * Does the handler handle the request?
-   * 
+   * Handle an HTTP request
+   *
    * @param request
-   *          the request
-   * 
-   * @return {@code true} if the request is handled by this handler
-   */
-      boolean isHandledBy(HttpRequest request);
-
-  /**
-   * Handle the request.
-   * 
-   * @param request
-   *          the request
+   *          the request to handle
    * @param response
    *          the response
    */
-      void handle(HttpRequest request, HttpResponse response);
+  void handle(HttpRequest request, HttpResponse response);
 }

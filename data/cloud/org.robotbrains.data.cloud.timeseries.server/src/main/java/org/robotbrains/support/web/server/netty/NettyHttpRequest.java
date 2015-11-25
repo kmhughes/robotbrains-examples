@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.robotbrains.support.server.web;
+package org.robotbrains.support.web.server.netty;
 
 import interactivespaces.InteractiveSpacesException;
 
@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import org.apache.logging.log4j.Logger;
+import org.robotbrains.support.web.server.HttpRequest;
 
 import java.net.HttpCookie;
 import java.net.URI;

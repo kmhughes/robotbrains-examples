@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.robotbrains.support.server.web;
+package org.robotbrains.support.web.server;
 
 import com.google.common.collect.Multimap;
 

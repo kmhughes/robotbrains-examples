@@ -14,7 +14,7 @@
  * the License.
  */
 
-package org.robotbrains.support.server.web;
+package org.robotbrains.support.web.server.netty;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -33,10 +33,13 @@ public class NettyWebServerInitializer extends ChannelInitializer<SocketChannel>
   private final SslContext sslCtx;
   
   private final NettyWebServer webServer;
+  
+  private final NettyWebServerHandler serverHandler;
 
-  public NettyWebServerInitializer(SslContext sslCtx, NettyWebServer webServer) {
+  public NettyWebServerInitializer(SslContext sslCtx, NettyWebServer webServer,  NettyWebServerHandler serverHandler) {
     this.sslCtx = sslCtx;
     this.webServer = webServer;
+    this.serverHandler = serverHandler;
   }
 
   @Override
@@ -52,6 +55,6 @@ public class NettyWebServerInitializer extends ChannelInitializer<SocketChannel>
     // Remove the following line if you don't want automatic content
     // compression.
     // p.addLast(new HttpContentCompressor());
-    p.addLast(new NettyWebServerHandler(webServer));
+    p.addLast(serverHandler);
   }
 }

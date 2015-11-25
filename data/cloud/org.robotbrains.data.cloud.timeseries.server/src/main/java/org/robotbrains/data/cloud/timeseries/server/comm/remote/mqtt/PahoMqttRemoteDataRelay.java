@@ -45,6 +45,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
 
+  private static final String MESSAGE_FIELD_DATA = "data";
+
+  private static final String MESSAGE_FIELD_VALUE_TYPE_DATA_SENSOR = "data.sensor";
+
+  private static final String MESSAGE_FIELD_TYPE = "type";
+
   /**
    * The configuration name for the MQTT topic for incoming data.
    */
@@ -235,9 +241,9 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    */
   private void processIncomingMessage(Map<String, Object> messageData) {
     DynamicObject object = new StandardDynamicObjectNavigator(messageData);
-    String messageType = object.getRequiredString("type");
+    String messageType = object.getRequiredString(MESSAGE_FIELD_TYPE);
     switch (messageType) {
-      case "data.sensor":
+      case MESSAGE_FIELD_VALUE_TYPE_DATA_SENSOR:
         processSensorDataMessage(object);
         break;
       default:
@@ -255,7 +261,7 @@ public class PahoMqttRemoteDataRelay implements RemoteDataRelay {
    *          the dynamic object containing the data
    */
   private void processSensorDataMessage(DynamicObject object) {
-    object.down("data");
+    object.down(MESSAGE_FIELD_DATA);
 
     String source = object.getString("source");
     String sensingUnit = object.getString("sensingunit");

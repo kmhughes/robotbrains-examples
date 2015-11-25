@@ -15,27 +15,24 @@
  * the License.
  */
 
-package org.robotbrains.support.server.web;
+package org.robotbrains.support.web.server.netty;
 
 import interactivespaces.InteractiveSpacesException;
 import interactivespaces.service.web.HttpResponseCode;
-import interactivespaces.service.web.server.HttpResponse;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.CookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.cookie.CookieEncoder;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import org.robotbrains.support.web.server.HttpResponse;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +46,24 @@ import java.util.Set;
  * @author Keith M. Hughes
  */
 public class NettyHttpResponse implements HttpResponse {
+
+  /**
+   * Create a Netty representation of a cookie.
+   *
+   * @param cookie
+   *          the standard Java cookie
+   *
+   * @return the Netty cookie
+   */
+  public static Cookie createNettyCookie(HttpCookie cookie) {
+    Cookie nettyCookie = new DefaultCookie(cookie.getName(), cookie.getValue());
+    nettyCookie.setDomain(cookie.getDomain());
+    nettyCookie.setMaxAge((int) cookie.getMaxAge());
+    nettyCookie.setPath(cookie.getPath());
+    nettyCookie.setSecure(cookie.getSecure());
+
+    return nettyCookie;
+  }
 
   /**
    * The Netty handler context.
@@ -208,23 +223,5 @@ public class NettyHttpResponse implements HttpResponse {
             return createNettyCookie(cookie);
           }
         })));
-  }
-
-  /**
-   * Create a Netty representation of a cookie.
-   *
-   * @param cookie
-   *          the standard Java cookie
-   *
-   * @return the Netty cookie
-   */
-  private Cookie createNettyCookie(HttpCookie cookie) {
-    Cookie nettyCookie = new DefaultCookie(cookie.getName(), cookie.getValue());
-    nettyCookie.setDomain(cookie.getDomain());
-    nettyCookie.setMaxAge((int) cookie.getMaxAge());
-    nettyCookie.setPath(cookie.getPath());
-    nettyCookie.setSecure(cookie.getSecure());
-
-    return nettyCookie;
   }
 }
