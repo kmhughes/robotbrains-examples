@@ -147,7 +147,7 @@ public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
     SensorData data = new SensorData(query.getSource(), query.getSensingUnit());
 
     performMetricQuery(query, data);
-    
+
     return data;
   }
 
@@ -243,7 +243,6 @@ public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
 
     log.info("Getting metric %s from time %s to time %s", metricName, query.getStartDate(),
         query.getEndDate());
-    ;
 
     QueryBuilder builder = QueryBuilder.getInstance();
     builder.setStart(query.getStartDate().toDate()).setEnd(query.getEndDate().toDate());
