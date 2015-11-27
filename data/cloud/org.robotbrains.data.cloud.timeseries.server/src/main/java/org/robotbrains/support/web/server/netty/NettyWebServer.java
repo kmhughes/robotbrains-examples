@@ -59,14 +59,15 @@ public class NettyWebServer implements WebServer {
   static final boolean SSL = false;
   static final int PORT = Integer.parseInt(System.getProperty("port", SSL ? "8443" : "8080"));
 
-  public static void main(String[] args) throws Exception{
-    Configurator.initialize(null, new ConfigurationSource(NettyWebServer.class.getClassLoader().getResourceAsStream("log4j.xml")));
+  public static void main(String[] args) throws Exception {
+    Configurator.initialize(null, new ConfigurationSource(
+        NettyWebServer.class.getClassLoader().getResourceAsStream("log4j.xml")));
 
     NettyWebServer server = new NettyWebServer(8095, LogManager.getFormatterLogger("HelloWorld"));
     server.startup();
-    
+
     server.addDynamicContentHandler("/foo", true, new HttpDynamicRequestHandler() {
-      
+
       @Override
       public void handle(HttpRequest request, HttpResponse response) {
         try {
@@ -156,6 +157,16 @@ public class NettyWebServer implements WebServer {
   private List<HttpDynamicPostRequestHandler> dynamicPostRequestHandlers = new ArrayList<>();
 
   /**
+   * All GET request handlers handled by this instance.
+   */
+  private List<NettyHttpGetRequestHandler> httpGetRequestHandlers = new ArrayList<>();
+
+  /**
+   * All POST request handlers handled by this instance.
+   */
+  private List<NettyHttpPostRequestHandler> httpPostRequestHandlers = new ArrayList<>();
+
+  /**
    * The logger to use.
    */
   private Logger log;
@@ -235,7 +246,7 @@ public class NettyWebServer implements WebServer {
     }
 
     staticContentHandler.setMimeResolver(defaultMimeResolver);
-    serverHandler.addHttpGetRequestHandler(staticContentHandler);
+    addHttpGetRequestHandler(staticContentHandler);
 
     staticContentRequestHandlers.add(staticContentHandler);
   }
@@ -249,8 +260,8 @@ public class NettyWebServer implements WebServer {
   @Override
   public void addDynamicContentHandler(String uriPrefix, boolean usePath,
       HttpDynamicRequestHandler handler, Map<String, String> extraHttpContentHeaders) {
-    serverHandler.addHttpGetRequestHandler(new NettyHttpDynamicGetRequestHandlerHandler(
-        serverHandler, uriPrefix, usePath, handler, extraHttpContentHeaders));
+    addHttpGetRequestHandler(new NettyHttpDynamicGetRequestHandlerHandler(serverHandler, uriPrefix,
+        usePath, handler, extraHttpContentHeaders));
     dynamicGetRequestHandlers.add(handler);
   }
 
@@ -263,8 +274,8 @@ public class NettyWebServer implements WebServer {
   @Override
   public void addDynamicPostRequestHandler(String uriPrefix, boolean usePath,
       HttpDynamicPostRequestHandler handler, Map<String, String> extraHttpContentHeaders) {
-    serverHandler.addHttpPostRequestHandler(new NettyHttpDynamicPostRequestHandlerHandler(
-        serverHandler, uriPrefix, usePath, handler, extraHttpContentHeaders));
+    addHttpPostRequestHandler(new NettyHttpDynamicPostRequestHandlerHandler(serverHandler,
+        uriPrefix, usePath, handler, extraHttpContentHeaders));
     dynamicPostRequestHandlers.add(handler);
   }
 
@@ -404,5 +415,63 @@ public class NettyWebServer implements WebServer {
    */
   public Logger getLog() {
     return log;
+  }
+
+  /**
+   * Register a new GET request handler to the server.
+   *
+   * @param handler
+   *          the handler to add
+   */
+  private void addHttpGetRequestHandler(NettyHttpGetRequestHandler handler) {
+    httpGetRequestHandlers.add(handler);
+  }
+
+  /**
+   * Locate a registered GET request handler that can handle the given request.
+   *
+   * @param nettyRequest
+   *          the Netty request
+   *
+   * @return the first handler that handles the request, or {@code null} if none
+   */
+      NettyHttpGetRequestHandler
+          locateGetRequestHandler(io.netty.handler.codec.http.HttpRequest nettyRequest) {
+    for (NettyHttpGetRequestHandler handler : httpGetRequestHandlers) {
+      if (handler.isHandledBy(nettyRequest)) {
+        return handler;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Register a new POST request handler to the server.
+   *
+   * @param handler
+   *          the handler to add
+   */
+  private void addHttpPostRequestHandler(NettyHttpPostRequestHandler handler) {
+    httpPostRequestHandlers.add(handler);
+  }
+
+  /**
+   * Locate a registered POST request handler that can handle the given request.
+   *
+   * @param nettyRequest
+   *          the Netty request
+   *
+   * @return the first handler that handles the request, or {@code null} if none
+   */
+      NettyHttpPostRequestHandler
+          locatePostRequestHandler(io.netty.handler.codec.http.HttpRequest nettyRequest) {
+    for (NettyHttpPostRequestHandler handler : httpPostRequestHandlers) {
+      if (handler.isHandledBy(nettyRequest)) {
+        return handler;
+      }
+    }
+
+    return null;
   }
 }

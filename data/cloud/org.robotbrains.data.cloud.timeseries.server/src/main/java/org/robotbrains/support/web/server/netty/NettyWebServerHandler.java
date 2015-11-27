@@ -107,16 +107,6 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
   private NettyWebServer webServer;
 
   /**
-   * All GET request handlers handled by this instance.
-   */
-  private List<NettyHttpGetRequestHandler> httpGetRequestHandlers = new ArrayList<>();
-
-  /**
-   * All POST request handlers handled by this instance.
-   */
-  private List<NettyHttpPostRequestHandler> httpPostRequestHandlers = new ArrayList<>();
-
-  /**
    * The authentication provider.
    */
   private HttpAuthProvider authProvider;
@@ -187,7 +177,7 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
       handleWebSocketFrame(ctx, (WebSocketFrame) msg);
     } else if (msg instanceof HttpChunkedInput) {
       handleHttpChunk(ctx, (HttpChunkedInput) msg);
-    } else if (msg != LastHttpContent.EMPTY_LAST_CONTENT){
+    } else if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
       webServer.getLog().warn("Web server received unknown frame %s", msg.getClass().getName());
     }
   }
@@ -281,17 +271,16 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
         cookies = authResponse.getCookies();
       }
 
-      for (NettyHttpGetRequestHandler handler : httpGetRequestHandlers) {
-        if (handler.isHandledBy(request)) {
-          try {
-            handler.handleWebRequest(context, request, cookies);
-          } catch (Exception e) {
-            webServer.getLog().error(
-                String.format("Exception when handling web request %s", request.getUri()), e);
-          }
-
-          return true;
+      NettyHttpGetRequestHandler handler = webServer.locateGetRequestHandler(request);
+      if (handler != null) {
+        try {
+          handler.handleWebRequest(context, request, cookies);
+        } catch (Throwable e) {
+          webServer.getLog()
+              .error(String.format("Exception when handling web request %s", request.getUri()), e);
         }
+
+        return true;
       }
     }
 
@@ -319,7 +308,7 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
       return false;
     }
 
-    NettyHttpPostRequestHandler postRequestHandler = locatePostRequestHandler(request);
+    NettyHttpPostRequestHandler postRequestHandler = webServer.locatePostRequestHandler(request);
     if (postRequestHandler == null) {
       return false;
     }
@@ -353,24 +342,6 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     return true;
-  }
-
-  /**
-   * Locate a registered POST request handler that can handle the given request.
-   *
-   * @param nettyRequest
-   *          the Netty request
-   *
-   * @return the first handler that handles the request, or {@code null} if none
-   */
-  private NettyHttpPostRequestHandler locatePostRequestHandler(HttpRequest nettyRequest) {
-    for (NettyHttpPostRequestHandler handler : httpPostRequestHandlers) {
-      if (handler.isHandledBy(nettyRequest)) {
-        return handler;
-      }
-    }
-
-    return null;
   }
 
   /**
@@ -599,26 +570,6 @@ public class NettyWebServerHandler extends SimpleChannelInboundHandler<Object> {
           HttpConstants.URL_PATH_COMPONENT_SEPARATOR + WebServer.WEBSOCKET_URI_PREFIX_DEFAULT;
     }
     this.webSocketHandlerFactory = webSocketHandlerFactory;
-  }
-
-  /**
-   * Register a new GET request handler to the server.
-   *
-   * @param handler
-   *          the handler to add
-   */
-  public void addHttpGetRequestHandler(NettyHttpGetRequestHandler handler) {
-    httpGetRequestHandlers.add(handler);
-  }
-
-  /**
-   * Register a new POST request handler to the server.
-   *
-   * @param handler
-   *          the handler to add
-   */
-  public void addHttpPostRequestHandler(NettyHttpPostRequestHandler handler) {
-    httpPostRequestHandlers.add(handler);
   }
 
   /**

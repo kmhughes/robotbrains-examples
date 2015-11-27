@@ -27,6 +27,8 @@ import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataR
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import org.robotbrains.data.cloud.timeseries.server.database.KairosDbDatabaseRelay;
 import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider;
+import org.robotbrains.data.cloud.timeseries.server.web.DataWebServer;
+import org.robotbrains.data.cloud.timeseries.server.web.StandardDataWebServer;
 import org.robotbrains.support.ManagedResources;
 import rx.Subscription;
 
@@ -40,8 +42,14 @@ import java.util.Map;
  */
 public class ServerMain {
 
+  /**
+   * The command line argument for specifying the directory for log files.
+   */
   private static final String COMMAND_ARG_LOG_FILEPATH = "l";
 
+  /**
+   * The command line argument for determining if the time series database should be connected to.
+   */
   private static final String COMMAND_ARG_DATABASE = "d";
 
   public static void main(String[] args) throws Exception {
@@ -78,6 +86,11 @@ public class ServerMain {
    * The connection to the timeseries database.
    */
   private KairosDbDatabaseRelay databaseRelay;
+
+  /**
+   * The web server that provides data access.
+   */
+  private DataWebServer dataWebServer;
 
   /**
    * Construct a server.
@@ -127,7 +140,12 @@ public class ServerMain {
     if (!cmd.hasOption(COMMAND_ARG_DATABASE)) {
       databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
       managedResources.addResource(databaseRelay);
+    } else {
+      // TODO(keith): Add fake data source
     }
+    
+    dataWebServer = new StandardDataWebServer(databaseRelay, configuration, log);
+    managedResources.addResource(dataWebServer);
 
     managedResources.startupResources();
   }

@@ -22,6 +22,7 @@ import interactivespaces.util.resource.ManagedResource;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.kairosdb.client.HttpClient;
+import org.kairosdb.client.builder.DataPoint;
 import org.kairosdb.client.builder.MetricBuilder;
 import org.kairosdb.client.builder.QueryBuilder;
 import org.kairosdb.client.response.GetResponse;
@@ -31,6 +32,7 @@ import org.kairosdb.client.response.Response;
 import org.kairosdb.client.response.Results;
 import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataRelay;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorDataQuery;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import rx.Subscription;
 
@@ -41,7 +43,7 @@ import java.util.Map;
  * 
  * @author Keith M. Hughes
  */
-public class KairosDbDatabaseRelay implements ManagedResource {
+public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
 
   /**
    * The configuration name for the hostname for the machine where KairosDB is
@@ -56,6 +58,11 @@ public class KairosDbDatabaseRelay implements ManagedResource {
    */
   public static final String CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_PORT =
       "database.kairosdb.connection.port";
+
+  /**
+   * The separator character between components in the event key.
+   */
+  private static final String EVENT_KEY_COMPONENT_SEPARATOR = "_";
 
   /**
    * The URL for connecting to the Kairos database.
@@ -114,8 +121,8 @@ public class KairosDbDatabaseRelay implements ManagedResource {
       testQueryDatabase();
 
       remoteDataRelaySubscription = remoteDataRelay.getSensorDataObservable()
-          .subscribe(sensorData -> processSensorData(sensorData));
-      
+          .subscribe(sensorData -> processIncomingSensorData(sensorData));
+
       log.info("Database relay for KairosDB at %s running", kairosConnectionUrl);
     } catch (Throwable e) {
       throw InteractiveSpacesException.newFormattedException(e,
@@ -135,14 +142,24 @@ public class KairosDbDatabaseRelay implements ManagedResource {
     }
   }
 
+  @Override
+  public SensorData querySensorData(SensorDataQuery query) throws Exception {
+    SensorData data = new SensorData(query.getSource(), query.getSensingUnit());
+
+    performMetricQuery(query, data);
+    
+    return data;
+  }
+
   /**
    * Process sensor data that has come in.
    * 
    * @param sensorData
    *          the sensor data
    */
-  private void processSensorData(SensorData sensorData) {
-    String eventKeyPrefix = sensorData.getSource() + "_" + sensorData.getSensingUnit() + "_";
+  private void processIncomingSensorData(SensorData sensorData) {
+    String eventKeyPrefix =
+        createEventKeyPrefix(sensorData.getSource(), sensorData.getSensingUnit());
 
     for (SensorDataSample sample : sensorData.getSamples()) {
       String eventKey = eventKeyPrefix + sample.getSensor();
@@ -163,6 +180,36 @@ public class KairosDbDatabaseRelay implements ManagedResource {
   }
 
   /**
+   * Create the prefix for an event key.
+   * 
+   * @param source
+   *          the source of the event
+   * @param sensingUnit
+   *          the sensing unit at the source
+   * 
+   * @return the event key prefix, just append the sensor to the end
+   */
+  private String createEventKeyPrefix(String source, String sensingUnit) {
+    return source + EVENT_KEY_COMPONENT_SEPARATOR + sensingUnit + EVENT_KEY_COMPONENT_SEPARATOR;
+  }
+
+  /**
+   * Create an event key.
+   * 
+   * @param source
+   *          the source of the event
+   * @param sensingUnit
+   *          the sensing unit at the source
+   * @param sensor
+   *          the sensor on the sensing unit
+   * 
+   * @return the event key
+   */
+  private String createEventKey(String source, String sensingUnit, String sensor) {
+    return createEventKeyPrefix(source, sensingUnit) + sensor;
+  }
+
+  /**
    * Perform some test queries on the database.
    * 
    * @throws Exception
@@ -175,12 +222,6 @@ public class KairosDbDatabaseRelay implements ManagedResource {
     for (String name : metricResponse.getResults()) {
       log.info(name);
     }
-
-    DateTime startTime = new DateTime(0);
-    DateTime endTime = DateTime.now();
-
-    performMetricQuery("keith.test_pi2_light", startTime, endTime);
-    performMetricQuery("keith.test_pi2_temperature", startTime, endTime);
   }
 
   /**
@@ -196,18 +237,28 @@ public class KairosDbDatabaseRelay implements ManagedResource {
    * @throws Exception
    *           something bad happened when querying the database
    */
-  private void performMetricQuery(String metricName, DateTime startTime, DateTime endTime)
-      throws Exception {
-    log.info("Getting metric %s from time %s to time %s", metricName, startTime, endTime);
+  private void performMetricQuery(SensorDataQuery query, SensorData data) throws Exception {
+    String sensor = query.getSensor();
+    String metricName = createEventKey(query.getSource(), query.getSensingUnit(), sensor);
+
+    log.info("Getting metric %s from time %s to time %s", metricName, query.getStartDate(),
+        query.getEndDate());
+    ;
 
     QueryBuilder builder = QueryBuilder.getInstance();
-    builder.setStart(startTime.toDate()).setEnd(endTime.toDate());
+    builder.setStart(query.getStartDate().toDate()).setEnd(query.getEndDate().toDate());
 
     builder.addMetric(metricName);
+
     QueryResponse response = kairosdbClient.query(builder);
     for (Queries queries : response.getQueries()) {
       for (Results results : queries.getResults()) {
-        log.info(results.getName() + results.getDataPoints());
+        for (DataPoint dataPoint : results.getDataPoints()) {
+          SensorDataSample sample =
+              new SensorDataSample(sensor, dataPoint.doubleValue(), dataPoint.getTimestamp());
+
+          data.addSample(sample);
+        }
       }
     }
   }
