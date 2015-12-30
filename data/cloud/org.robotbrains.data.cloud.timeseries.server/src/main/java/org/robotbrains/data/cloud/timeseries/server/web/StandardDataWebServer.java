@@ -121,12 +121,8 @@ public class StandardDataWebServer implements DataWebServer {
     webServer = new NettyWebServer(webServerPort, log);
     webServer.startup();
 
-    webServer.addDynamicContentHandler("graph", true, new HttpDynamicRequestHandler() {
-
-      @Override
-      public void handle(HttpRequest request, HttpResponse response) {
-        handleGraphRequest(request, response);
-      }
+    webServer.addDynamicContentHandler("graph", true, (request, response) -> {
+      handleGraphRequest(request, response);
     });
   }
 
