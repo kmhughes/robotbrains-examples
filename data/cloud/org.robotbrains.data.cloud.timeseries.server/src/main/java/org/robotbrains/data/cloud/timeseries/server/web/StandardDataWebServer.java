@@ -18,6 +18,16 @@ package org.robotbrains.data.cloud.timeseries.server.web;
 
 import interactivespaces.util.web.CommonMimeTypes;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
@@ -35,17 +45,14 @@ import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataQuery;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
 import org.robotbrains.data.cloud.timeseries.server.database.DatabaseRelay;
-import org.robotbrains.support.web.server.HttpDynamicRequestHandler;
 import org.robotbrains.support.web.server.HttpRequest;
 import org.robotbrains.support.web.server.HttpResponse;
 import org.robotbrains.support.web.server.WebServer;
 import org.robotbrains.support.web.server.netty.NettyWebServer;
 
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.Map;
-
-import javax.imageio.ImageIO;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 
 /**
  * The standard web server that provides access to the time series data.
@@ -55,8 +62,8 @@ import javax.imageio.ImageIO;
 public class StandardDataWebServer implements DataWebServer {
 
   public static void main(String[] args) throws Exception {
-    Configurator.initialize(null, new ConfigurationSource(
-        StandardDataWebServer.class.getClassLoader().getResourceAsStream("log4j.xml")));
+    Configurator.initialize(null, new ConfigurationSource(StandardDataWebServer.class
+        .getClassLoader().getResourceAsStream("log4j.xml")));
 
     StandardDataWebServer server =
         new StandardDataWebServer(null, null, LogManager.getFormatterLogger("HelloWorld"));
@@ -67,6 +74,19 @@ public class StandardDataWebServer implements DataWebServer {
    * The pattern for date, times.
    */
   private static final String DATE_TIME_FORMAT_PATTERN = "yyyy/MM/dd@HH:mm:ss";
+
+  /**
+   * The JSON mapper.
+   * 
+   * <p>
+   * This object is thread safe.
+   */
+  private static final ObjectMapper MAPPER;
+
+  static {
+    MAPPER = new ObjectMapper();
+    MAPPER.getFactory().enable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
+  }
 
   /**
    * The database relay.
@@ -121,13 +141,11 @@ public class StandardDataWebServer implements DataWebServer {
     webServer = new NettyWebServer(webServerPort, log);
     webServer.startup();
 
-    webServer.addDynamicContentHandler("graph", true, new HttpDynamicRequestHandler() {
+    webServer.addDynamicContentHandler("graph", true,
+        (request, response) -> handleGraphRequest(request, response));
 
-      @Override
-      public void handle(HttpRequest request, HttpResponse response) {
-        handleGraphRequest(request, response);
-      }
-    });
+    webServer.addDynamicContentHandler("data", true,
+        (request, response) -> handleDataRequest(request, response));
   }
 
   @Override
@@ -135,6 +153,58 @@ public class StandardDataWebServer implements DataWebServer {
     if (webServer != null) {
       webServer.shutdown();
       webServer = null;
+    }
+  }
+
+  /**
+   * Handle a request for data.
+   * 
+   * @param request
+   *          the HTTP request
+   * @param response
+   *          the HTTP response
+   */
+  private void handleDataRequest(HttpRequest request, HttpResponse response) {
+    try {
+      SensorDataQuery query = getDataQueryFromRequest(request);
+
+      log.info("Data query is %s", query);
+
+      SensorData data = databaseRelay.querySensorData(query);
+
+      Map<String, Object> sensorMap = new HashMap<>();
+      List<Map<String, Object>> sampleList = new ArrayList<>();
+      String sensorName = null;
+      for (SensorDataSample sample : data.getSamples()) {
+        Map<String, Object> sampleMap = new HashMap<>();
+        sampleMap.put("timestamp", sample.getTimestamp());
+        sampleMap.put("value", sample.getValue());
+
+        sampleList.add(sampleMap);
+
+        sensorName = sample.getSensor();
+      }
+
+      if (sensorName != null) {
+        Map<String, Object> sensorData = new HashMap<>();
+        sensorData.put("samples", sampleList);
+
+        sensorMap.put(sensorName, sensorData);
+      }
+
+      // TODO(keith): Consider placing all this in the sensor data map.
+      Map<String, Object> resultData = new HashMap<>();
+      resultData.put("source", data.getSource());
+      resultData.put("sensingUnit", data.getSensingUnit());
+      resultData.put("sensors", sensorMap);
+
+      String resultContent = MAPPER.writeValueAsString(resultData);
+      response.setContentType("application/json");
+      OutputStream outputStream = response.getOutputStream();
+      outputStream.write(resultContent.getBytes(Charsets.UTF_8));
+      outputStream.flush();
+    } catch (Exception e) {
+      log.error("Could not get time series data", e);
     }
   }
 
@@ -159,37 +229,6 @@ public class StandardDataWebServer implements DataWebServer {
     } catch (Exception e) {
       log.error("Could not plot time series graph", e);
     }
-  }
-
-  /**
-   * Render a chart from the sensor data.
-   * 
-   * @param query
-   *          the data query
-   * @param data
-   *          the query result
-   * 
-   * @return a chart of the data
-   */
-  private JFreeChart renderChart(SensorDataQuery query, SensorData data) {
-    return createChart(query, createDataset(data));
-  }
-
-  /**
-   * Write out the chart as an HTTP resonse.
-   * 
-   * @param response
-   *          the HTTP response
-   * @param chart
-   *          the chart to be written
-   * 
-   * @throws IOException
-   *           something bad happened
-   */
-  private void writeChartResponse(HttpResponse response, JFreeChart chart) throws IOException {
-    BufferedImage chartImage = chart.createBufferedImage(560, 370, null);
-    ImageIO.write(chartImage, "png", response.getOutputStream());
-    response.setContentType(CommonMimeTypes.MIME_TYPE_IMAGE_PNG);
   }
 
   /**
@@ -226,6 +265,37 @@ public class StandardDataWebServer implements DataWebServer {
   }
 
   /**
+   * Render a chart from the sensor data.
+   * 
+   * @param query
+   *          the data query
+   * @param data
+   *          the query result
+   * 
+   * @return a chart of the data
+   */
+  private JFreeChart renderChart(SensorDataQuery query, SensorData data) {
+    return createChart(query, createDataset(data));
+  }
+
+  /**
+   * Write out the chart as an HTTP resonse.
+   * 
+   * @param response
+   *          the HTTP response
+   * @param chart
+   *          the chart to be written
+   * 
+   * @throws IOException
+   *           something bad happened
+   */
+  private void writeChartResponse(HttpResponse response, JFreeChart chart) throws IOException {
+    BufferedImage chartImage = chart.createBufferedImage(560, 370, null);
+    ImageIO.write(chartImage, "png", response.getOutputStream());
+    response.setContentType(CommonMimeTypes.MIME_TYPE_IMAGE_PNG);
+  }
+
+  /**
    * Create a data set from the sensor data.
    * 
    * @param data
@@ -257,8 +327,8 @@ public class StandardDataWebServer implements DataWebServer {
    * @return a chart with the data
    */
   private JFreeChart createChart(SensorDataQuery query, XYDataset dataset) {
-    return ChartFactory.createTimeSeriesChart(String.format("Sample Data: %s - %s - %s",
-        query.getSource(), query.getSensingUnit(), query.getSensor()), "Time", "Value", dataset,
-        false, false, false);
+    return ChartFactory.createTimeSeriesChart(
+        String.format("Sample Data: %s - %s - %s", query.getSource(), query.getSensingUnit(),
+            query.getSensor()), "Time", "Value", dataset, false, false, false);
   }
 }
