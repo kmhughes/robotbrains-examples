@@ -71,9 +71,50 @@ public class StandardDataWebServer implements DataWebServer {
   }
 
   /**
+   * The URI prefix for the endpoint for getting the raw timeseries data.
+   */
+  private static final String WEB_SERVER_URI_PREFIX_ENDPOINT_DATA = "data";
+
+  /**
+   * The URI prefix for the endpoint for getting the timeseries data as a graph.
+   */
+  private static final String WEB_SERVER_URI_PREFIX_ENDPOINT_GRAPH = "graph";
+
+  /**
    * The pattern for date, times.
    */
   private static final String DATE_TIME_FORMAT_PATTERN = "yyyy/MM/dd@HH:mm:ss";
+
+  /**
+   * The field name in a data result giving the source of the data.
+   */
+  private static final String DATA_RESULT_FIELD_SOURCE = "source";
+
+  /**
+   * The field name in a data result giving the sensing unit of the data.
+   */
+  private static final String DATA_RESULT_FIELD_SENSING_UNIT = "sensingUnit";
+
+  /**
+   * The field name in a data result giving the sensor map of the data.
+   */
+  private static final String DATA_RESULT_FIELD_SENSOR_MAP = "sensors";
+
+  /**
+   * The field name in a data result giving the samples in an individual
+   * sensor's data.
+   */
+  private static final String DATA_RESULT_FIELD_SENSOR_MAP_SAMPLES = "samples";
+
+  /**
+   * The field name in a data result giving the value of a sample.
+   */
+  private static final String DATA_RESULT_FIELD_SAMPLE_VALUE = "value";
+
+  /**
+   * The field name in a data result giving the timestamp of a sample.
+   */
+  private static final String DATA_RESULT_FIELD_SAMPLE_TIMESTAMP = "timestamp";
 
   /**
    * The JSON mapper.
@@ -141,11 +182,11 @@ public class StandardDataWebServer implements DataWebServer {
     webServer = new NettyWebServer(webServerPort, log);
     webServer.startup();
 
-    webServer.addDynamicContentHandler("graph", true,
-        (request, response) -> handleGraphRequest(request, response));
+    webServer.addDynamicContentHandler(WEB_SERVER_URI_PREFIX_ENDPOINT_GRAPH, true, (request,
+        response) -> handleGraphRequest(request, response));
 
-    webServer.addDynamicContentHandler("data", true,
-        (request, response) -> handleDataRequest(request, response));
+    webServer.addDynamicContentHandler(WEB_SERVER_URI_PREFIX_ENDPOINT_DATA, true, (request,
+        response) -> handleDataRequest(request, response));
   }
 
   @Override
@@ -177,8 +218,8 @@ public class StandardDataWebServer implements DataWebServer {
       String sensorName = null;
       for (SensorDataSample sample : data.getSamples()) {
         Map<String, Object> sampleMap = new HashMap<>();
-        sampleMap.put("timestamp", sample.getTimestamp());
-        sampleMap.put("value", sample.getValue());
+        sampleMap.put(DATA_RESULT_FIELD_SAMPLE_TIMESTAMP, sample.getTimestamp());
+        sampleMap.put(DATA_RESULT_FIELD_SAMPLE_VALUE, sample.getValue());
 
         sampleList.add(sampleMap);
 
@@ -187,19 +228,19 @@ public class StandardDataWebServer implements DataWebServer {
 
       if (sensorName != null) {
         Map<String, Object> sensorData = new HashMap<>();
-        sensorData.put("samples", sampleList);
+        sensorData.put(DATA_RESULT_FIELD_SENSOR_MAP_SAMPLES, sampleList);
 
         sensorMap.put(sensorName, sensorData);
       }
 
       // TODO(keith): Consider placing all this in the sensor data map.
       Map<String, Object> resultData = new HashMap<>();
-      resultData.put("source", data.getSource());
-      resultData.put("sensingUnit", data.getSensingUnit());
-      resultData.put("sensors", sensorMap);
+      resultData.put(DATA_RESULT_FIELD_SOURCE, data.getSource());
+      resultData.put(DATA_RESULT_FIELD_SENSING_UNIT, data.getSensingUnit());
+      resultData.put(DATA_RESULT_FIELD_SENSOR_MAP, sensorMap);
 
       String resultContent = MAPPER.writeValueAsString(resultData);
-      response.setContentType("application/json");
+      response.setContentType(CommonMimeTypes.MIME_TYPE_APPLICATION_JSON);
       OutputStream outputStream = response.getOutputStream();
       outputStream.write(resultContent.getBytes(Charsets.UTF_8));
       outputStream.flush();
