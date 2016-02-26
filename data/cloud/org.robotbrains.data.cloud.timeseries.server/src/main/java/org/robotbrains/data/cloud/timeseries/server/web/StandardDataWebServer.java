@@ -16,7 +16,7 @@
 
 package org.robotbrains.data.cloud.timeseries.server.web;
 
-import interactivespaces.util.web.CommonMimeTypes;
+import io.smartspaces.util.web.CommonMimeTypes;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;

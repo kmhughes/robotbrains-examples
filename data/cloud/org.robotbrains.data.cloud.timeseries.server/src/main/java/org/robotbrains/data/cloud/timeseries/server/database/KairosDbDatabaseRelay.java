@@ -16,11 +16,11 @@
 
 package org.robotbrains.data.cloud.timeseries.server.database;
 
-import interactivespaces.InteractiveSpacesException;
-import interactivespaces.util.resource.ManagedResource;
+import io.smartspaces.SmartSpacesException;
+
+import java.util.Map;
 
 import org.apache.logging.log4j.Logger;
-import org.joda.time.DateTime;
 import org.kairosdb.client.HttpClient;
 import org.kairosdb.client.builder.DataPoint;
 import org.kairosdb.client.builder.MetricBuilder;
@@ -34,16 +34,15 @@ import org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt.RemoteDataR
 import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataQuery;
 import org.robotbrains.data.cloud.timeseries.server.data.SensorDataSample;
-import rx.Subscription;
 
-import java.util.Map;
+import rx.Subscription;
 
 /**
  * Data database relay that uses KairosDB as a backend.
  * 
  * @author Keith M. Hughes
  */
-public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
+public class KairosDbDatabaseRelay implements DatabaseRelay {
 
   /**
    * The configuration name for the hostname for the machine where KairosDB is
@@ -113,19 +112,21 @@ public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
   @Override
   public void startup() {
     try {
-      String kairosConnectionUrl = String.format("http://%s:%s",
-          configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_HOST),
-          configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_PORT));
+      String kairosConnectionUrl =
+          String.format("http://%s:%s",
+              configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_HOST),
+              configuration.get(CONFIGURATION_DATABASE_KAIROSDB_CONNECTION_PORT));
       kairosdbClient = new HttpClient(kairosConnectionUrl);
 
       testQueryDatabase();
 
-      remoteDataRelaySubscription = remoteDataRelay.getSensorDataObservable()
-          .subscribe(sensorData -> processIncomingSensorData(sensorData));
+      remoteDataRelaySubscription =
+          remoteDataRelay.getSensorDataObservable().subscribe(
+              sensorData -> processIncomingSensorData(sensorData));
 
       log.info("Database relay for KairosDB at %s running", kairosConnectionUrl);
     } catch (Throwable e) {
-      throw InteractiveSpacesException.newFormattedException(e,
+      throw SmartSpacesException.newFormattedException(e,
           "Could not start up KairosDB database relay");
     }
   }
@@ -137,7 +138,7 @@ public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
     try {
       kairosdbClient.shutdown();
     } catch (Throwable e) {
-      throw InteractiveSpacesException.newFormattedException(e,
+      throw SmartSpacesException.newFormattedException(e,
           "Could not shut down KairosDB database relay");
     }
   }
@@ -165,8 +166,8 @@ public class KairosDbDatabaseRelay implements ManagedResource, DatabaseRelay {
       String eventKey = eventKeyPrefix + sample.getSensor();
       MetricBuilder builder = MetricBuilder.getInstance();
 
-      builder.addMetric(eventKey).addTag("sensor", "snapshot").addDataPoint(sample.getTimestamp(),
-          sample.getValue());
+      builder.addMetric(eventKey).addTag("sensor", "snapshot")
+          .addDataPoint(sample.getTimestamp(), sample.getValue());
 
       try {
         Response pushResponse = kairosdbClient.pushMetrics(builder);

@@ -15,8 +15,9 @@
  */
 package org.robotbrains.data.cloud.timeseries.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.io.File;
+import java.util.Map;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -30,10 +31,11 @@ import org.robotbrains.data.cloud.timeseries.server.logging.Log4jLoggingProvider
 import org.robotbrains.data.cloud.timeseries.server.web.DataWebServer;
 import org.robotbrains.data.cloud.timeseries.server.web.StandardDataWebServer;
 import org.robotbrains.support.ManagedResources;
+
 import rx.Subscription;
 
-import java.io.File;
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 /**
  * The main driver for the time series cloud.
@@ -48,7 +50,8 @@ public class ServerMain {
   private static final String COMMAND_ARG_LOG_FILEPATH = "l";
 
   /**
-   * The command line argument for determining if the time series database should be connected to.
+   * The command line argument for determining if the time series database
+   * should be connected to.
    */
   private static final String COMMAND_ARG_DATABASE = "d";
 
@@ -129,13 +132,16 @@ public class ServerMain {
     remoteDataRelay = new PahoMqttRemoteDataRelay(configuration, log);
     managedResources.addResource(remoteDataRelay);
 
-    Subscription subscription = remoteDataRelay.getSensorDataObservable().subscribe(sensorData -> {
-      log.debug("Got data from source %s, sensing unit %s", sensorData.getSource(),
-          sensorData.getSensingUnit());
-      for (SensorDataSample sample : sensorData.getSamples()) {
-        log.debug("\tData %s %f %d", sample.getSensor(), sample.getValue(), sample.getTimestamp());
-      }
-    });
+    Subscription subscription =
+        remoteDataRelay.getSensorDataObservable().subscribe(
+            sensorData -> {
+              log.debug("Got data from source %s, sensing unit %s", sensorData.getSource(),
+                  sensorData.getSensingUnit());
+              for (SensorDataSample sample : sensorData.getSamples()) {
+                log.debug("\tData %s %f %d", sample.getSensor(), sample.getValue(),
+                    sample.getTimestamp());
+              }
+            });
 
     if (!cmd.hasOption(COMMAND_ARG_DATABASE)) {
       databaseRelay = new KairosDbDatabaseRelay(remoteDataRelay, configuration, log);
@@ -143,7 +149,7 @@ public class ServerMain {
     } else {
       // TODO(keith): Add fake data source
     }
-    
+
     dataWebServer = new StandardDataWebServer(databaseRelay, configuration, log);
     managedResources.addResource(dataWebServer);
 
