@@ -28,10 +28,7 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.ConfigurationSource;
-import org.apache.logging.log4j.core.config.Configurator;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.general.SeriesException;
@@ -60,15 +57,6 @@ import com.google.common.base.Charsets;
  * @author Keith M. Hughes
  */
 public class StandardDataWebServer implements DataWebServer {
-
-  public static void main(String[] args) throws Exception {
-    Configurator.initialize(null, new ConfigurationSource(StandardDataWebServer.class
-        .getClassLoader().getResourceAsStream("log4j.xml")));
-
-    StandardDataWebServer server =
-        new StandardDataWebServer(null, null, LogManager.getFormatterLogger("HelloWorld"));
-    server.startup();
-  }
 
   /**
    * The URI prefix for the endpoint for getting the raw timeseries data.
