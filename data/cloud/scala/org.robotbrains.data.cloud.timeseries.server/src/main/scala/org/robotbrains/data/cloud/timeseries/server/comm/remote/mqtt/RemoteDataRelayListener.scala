@@ -14,16 +14,16 @@
  * the License.
  */
 
-package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
+package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt
 
-import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorData
 
 /**
  * A listener for messages from a remote data relay.
  * 
  * @author Keith M. Hughes
  */
-public interface RemoteDataRelayListener {
+trait RemoteDataRelayListener {
 
   /**
    * New data has come in.
@@ -31,5 +31,5 @@ public interface RemoteDataRelayListener {
    * @param data
    *          the new data
    */
-   void onNewData(SensorData data);
+   def onNewData(data: SensorData): Unit;
 }

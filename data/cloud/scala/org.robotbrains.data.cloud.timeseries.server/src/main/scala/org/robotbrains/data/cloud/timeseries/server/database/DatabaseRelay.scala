@@ -23,21 +23,22 @@ import org.robotbrains.data.cloud.timeseries.server.data.SensorDataQuery;
 
 /**
  * The relay for interfacing to the time series database.
- * 
+ *
  * @author Keith M. Hughes
  */
-public interface DatabaseRelay extends ManagedResource {
+trait DatabaseRelay extends ManagedResource {
 
   /**
    * Query the database for sensor data.
-   * 
+   *
    * @param query
    *          the data query
-   * 
+   *
    * @return the sensor data for the query
-   * 
+   *
    * @throws Exception
    *           something happened during the query
    */
-  SensorData querySensorData(SensorDataQuery query) throws Exception;
+  @throws(classOf[Exception])
+  def querySensorData(query: SensorDataQuery): SensorData
 }

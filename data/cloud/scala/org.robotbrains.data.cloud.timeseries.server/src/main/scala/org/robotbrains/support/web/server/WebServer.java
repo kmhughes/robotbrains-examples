@@ -53,7 +53,7 @@ public interface WebServer extends ManagedResource {
    * @param baseDir
    *          the base directory for the content
    */
-  void addStaticContentHandler(String uriPrefix, File baseDir);
+      void addStaticContentHandler(String uriPrefix, File baseDir);
 
   /**
    * Add in a new static content handler to the server.
@@ -70,8 +70,8 @@ public interface WebServer extends ManagedResource {
    *          extra content headers to add to every response, can be
    *          {@code null}
    */
-  void addStaticContentHandler(String uriPrefix, File baseDir,
-      Map<String, String> extraHttpContentHeaders);
+      void addStaticContentHandler(String uriPrefix, File baseDir,
+          Map<String, String> extraHttpContentHeaders);
 
   /**
    * Add in a new static content handler to the server.
@@ -91,8 +91,8 @@ public interface WebServer extends ManagedResource {
    *          dynamic content handler to use if requested file is missing, can
    *          be {@code null}
    */
-  void addStaticContentHandler(String uriPrefix, File baseDir,
-      Map<String, String> extraHttpContentHeaders, HttpDynamicRequestHandler fallbackHandler);
+      void addStaticContentHandler(String uriPrefix, File baseDir,
+          Map<String, String> extraHttpContentHeaders, HttpDynamicRequestHandler fallbackHandler);
 
   /**
    * Add in a new dynamic content handler to the server.
@@ -109,8 +109,8 @@ public interface WebServer extends ManagedResource {
    * @param handler
    *          dynamic request handler
    */
-      void
-      addDynamicContentHandler(String uriPrefix, boolean usePath, HttpDynamicRequestHandler handler);
+      void addDynamicContentHandler(String uriPrefix, boolean usePath,
+          HttpDynamicRequestHandler handler);
 
   /**
    * Add in a new dynamic content handler to the server.
@@ -129,8 +129,8 @@ public interface WebServer extends ManagedResource {
    *          extra HTTP content headers to add to all responses to the handler,
    *          can be {@code null}
    */
-  void addDynamicContentHandler(String uriPrefix, boolean usePath,
-      HttpDynamicRequestHandler handler, Map<String, String> extraHttpContentHeaders);
+      void addDynamicContentHandler(String uriPrefix, boolean usePath,
+          HttpDynamicRequestHandler handler, Map<String, String> extraHttpContentHeaders);
 
   /**
    * Add in a new dynamic POSt request handler to the server.
@@ -147,8 +147,8 @@ public interface WebServer extends ManagedResource {
    * @param handler
    *          dynamic request handler
    */
-  void addDynamicPostRequestHandler(String uriPrefix, boolean usePath,
-      HttpDynamicPostRequestHandler handler);
+      void addDynamicPostRequestHandler(String uriPrefix, boolean usePath,
+          HttpDynamicPostRequestHandler handler);
 
   /**
    * Add in a new dynamic POST request handler to the server.
@@ -167,8 +167,8 @@ public interface WebServer extends ManagedResource {
    *          extra HTTP content headers to add to all responses to the handler,
    *          can be {@code null}
    */
-  void addDynamicPostRequestHandler(String uriPrefix, boolean usePath,
-      HttpDynamicPostRequestHandler handler, Map<String, String> extraHttpContentHeaders);
+      void addDynamicPostRequestHandler(String uriPrefix, boolean usePath,
+          HttpDynamicPostRequestHandler handler, Map<String, String> extraHttpContentHeaders);
 
   /**
    * Get all static content request handlers.
@@ -176,7 +176,7 @@ public interface WebServer extends ManagedResource {
    * @return all static content request handlers in the order they were added to
    *         the server
    */
-  List<HttpStaticContentRequestHandler> getStaticContentRequestHandlers();
+      List<HttpStaticContentRequestHandler> getStaticContentRequestHandlers();
 
   /**
    * Get all dynamic GET request handlers.
@@ -184,7 +184,7 @@ public interface WebServer extends ManagedResource {
    * @return all dynamic request handlers in the order they were added to the
    *         server
    */
-  List<HttpDynamicRequestHandler> getDynamicRequestHandlers();
+      List<HttpDynamicRequestHandler> getDynamicRequestHandlers();
 
   /**
    * Get all dynamic POST request handlers.
@@ -192,7 +192,7 @@ public interface WebServer extends ManagedResource {
    * @return all dynamic request handlers in the order they were added to the
    *         server
    */
-  List<HttpDynamicPostRequestHandler> getDynamicPostRequestHandlers();
+      List<HttpDynamicPostRequestHandler> getDynamicPostRequestHandlers();
 
   /**
    * Set the factory for creating web socket handlers.
@@ -203,8 +203,8 @@ public interface WebServer extends ManagedResource {
    *          the factory to use (can be {@code null} if don't want to handle
    *          web socket calls)
    */
-  void setWebSocketHandlerFactory(String webSocketUriPrefix,
-      WebServerWebSocketHandlerFactory webSocketHandlerFactory);
+      void setWebSocketHandlerFactory(String webSocketUriPrefix,
+          WebServerWebSocketHandlerFactory webSocketHandlerFactory);
 
   /**
    * Get the name given to the server.
@@ -214,7 +214,7 @@ public interface WebServer extends ManagedResource {
    *
    * @return the server name
    */
-  String getServerName();
+      String getServerName();
 
   /**
    * Set the name given to the server.
@@ -228,14 +228,14 @@ public interface WebServer extends ManagedResource {
    * @param serverName
    *          the server name
    */
-  void setServerName(String serverName);
+      void setServerName(String serverName);
 
   /**
    * Get the port the server is listening on.
    *
    * @return the port
    */
-  int getPort();
+      int getPort();
 
   /**
    * Set the port the server is listening on.
@@ -246,7 +246,7 @@ public interface WebServer extends ManagedResource {
    * @param port
    *          the port
    */
-  void setPort(int port);
+      void setPort(int port);
 
   /**
    * Get the default MIME resolver to use.
@@ -264,7 +264,7 @@ public interface WebServer extends ManagedResource {
    * @param resolver
    *          the default MIME resolver, can be {@code null}
    */
-  void setDefaultMimeResolver(MimeResolver resolver);
+      void setDefaultMimeResolver(MimeResolver resolver);
 
   /**
    * Add an HTTP content header that will go out with every HTTP response.
@@ -274,7 +274,7 @@ public interface WebServer extends ManagedResource {
    * @param value
    *          value of the header
    */
-  void addContentHeader(String name, String value);
+      void addContentHeader(String name, String value);
 
   /**
    * Add an HTTP content header that will go out with every HTTP response.
@@ -283,7 +283,7 @@ public interface WebServer extends ManagedResource {
    *          the headers to add, the key is the header name, value is the
    *          header value
    */
-  void addContentHeaders(Map<String, String> headers);
+      void addContentHeaders(Map<String, String> headers);
 
   /**
    * Set whether the server should run in debug mode.
@@ -291,14 +291,14 @@ public interface WebServer extends ManagedResource {
    * @param debugMode
    *          {@code true} if should be in debug mode.
    */
-  void setDebugMode(boolean debugMode);
+      void setDebugMode(boolean debugMode);
 
   /**
    * Does the server supports secure communication?
    *
    * @return {@code true} if supports secure communications
    */
-  boolean isSecureServer();
+      boolean isSecureServer();
 
   /**
    * Set whether server supports secure communication.
@@ -306,7 +306,7 @@ public interface WebServer extends ManagedResource {
    * @param secureServer
    *          {@code true} if should support secure communications
    */
-  void setSecureServer(boolean secureServer);
+      void setSecureServer(boolean secureServer);
 
   /**
    * Set the SSL certificate files.
@@ -316,7 +316,7 @@ public interface WebServer extends ManagedResource {
    * @param sslKeyFile
    *          a PKCS#8 private key file in PEM format
    */
-  void setSslCertificates(File sslCertChainFile, File sslKeyFile);
+      void setSslCertificates(File sslCertChainFile, File sslKeyFile);
 
   /**
    * Set the AuthProvider to use with this server, if no auth provider is set on
@@ -327,7 +327,7 @@ public interface WebServer extends ManagedResource {
    * @param authProvider
    *          the authentication provider
    */
-  void setAuthProvider(HttpAuthProvider authProvider);
+      void setAuthProvider(HttpAuthProvider authProvider);
 
   /**
    * Set the access manager for this webserver. The access manager will only be
@@ -336,5 +336,5 @@ public interface WebServer extends ManagedResource {
    * @param accessManager
    *          the access manager
    */
-  void setAccessManager(WebResourceAccessManager accessManager);
+      void setAccessManager(WebResourceAccessManager accessManager);
 }

@@ -23,6 +23,6 @@ import io.smartspaces.util.resource.ManagedResource;
  * 
  * @author Keith M. Hughes
  */
-public interface DataWebServer extends ManagedResource {
+trait DataWebServer extends ManagedResource {
 
 }

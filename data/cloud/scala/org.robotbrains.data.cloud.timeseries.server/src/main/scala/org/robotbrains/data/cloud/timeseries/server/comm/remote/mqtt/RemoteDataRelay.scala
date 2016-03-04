@@ -14,25 +14,25 @@
  * the License.
  */
 
-package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt;
+package org.robotbrains.data.cloud.timeseries.server.comm.remote.mqtt
 
-import io.smartspaces.util.resource.ManagedResource;
+import io.smartspaces.util.resource.ManagedResource
 
-import org.robotbrains.data.cloud.timeseries.server.data.SensorData;
+import org.robotbrains.data.cloud.timeseries.server.data.SensorData
 
-import rx.Observable;
+import rx.lang.scala.Observable
 
 /**
  * The remote data relay transfers data in and out of the server.
  * 
  * @author Keith M. Hughes
  */
-public interface RemoteDataRelay extends ManagedResource {
+trait RemoteDataRelay extends ManagedResource {
 
   /**
    * Get an observable for the data relay.
    * 
    * @return the observable
    */
-  Observable<SensorData> getSensorDataObservable();
+  def getSensorDataObservable(): Observable[SensorData]
 }
