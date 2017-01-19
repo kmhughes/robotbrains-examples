@@ -36,7 +36,7 @@ import javax.net.ssl.TrustManagerFactory;
 
 /**
  * An MQTT example that subscribes on a topic. It logs into the broker over a
- * secure connection.
+ * secure connection using a username/password.
  * 
  * @author Keith M. Hughes
  */

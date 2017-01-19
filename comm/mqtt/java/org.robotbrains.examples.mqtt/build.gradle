@@ -3,6 +3,9 @@ apply plugin: 'eclipse'
 
 dependencies {
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
+	
+	compile 'org.bouncycastle:bcprov-jdk15on:1.56'
+	compile 'org.bouncycastle:bcpkix-jdk15on:1.56'
 }
 
 repositories {
